@@ -1,0 +1,122 @@
+[
+  {
+    "id": 1,
+    "dealName": "Enterprise Cloud Migration",
+    "company": "Acme Corp",
+    "stage": "Pipeline",
+    "value": 45000,
+    "priority": "High",
+    "owner": "Sarah Chen",
+    "closeDate": "2026-07-15"
+  },
+  {
+    "id": 2,
+    "dealName": "AI Customer Service Integration",
+    "company": "Initech",
+    "stage": "At risk",
+    "value": 28000,
+    "priority": "Medium",
+    "owner": "Eddie Lake",
+    "closeDate": "2026-06-30"
+  },
+  {
+    "id": 3,
+    "dealName": "SaaS Platform Subscription",
+    "company": "Stark Industries",
+    "stage": "Closing this month",
+    "value": 125000,
+    "priority": "High",
+    "owner": "Sarah Chen",
+    "closeDate": "2026-06-10"
+  },
+  {
+    "id": 4,
+    "dealName": "Hardware Refresh Purchase",
+    "company": "Wayne Enterprises",
+    "stage": "Pipeline",
+    "value": 18500,
+    "priority": "Low",
+    "owner": "Carlos Rodriguez",
+    "closeDate": "2026-08-01"
+  },
+  {
+    "id": 5,
+    "dealName": "Data Warehousing Retainer",
+    "company": "Cyberdyne Systems",
+    "stage": "Closing this month",
+    "value": 60000,
+    "priority": "High",
+    "owner": "Sarah Chen",
+    "closeDate": "2026-05-28"
+  },
+  {
+    "id": 6,
+    "dealName": "Global CDN Setup",
+    "company": "Hooli",
+    "stage": "Pipeline",
+    "value": 35000,
+    "priority": "Medium",
+    "owner": "Carlos Rodriguez",
+    "closeDate": "2026-07-22"
+  },
+  {
+    "id": 7,
+    "dealName": "Security Compliance Audit Tools",
+    "company": "Umbrella Corp",
+    "stage": "At risk",
+    "value": 52000,
+    "priority": "High",
+    "owner": "Eddie Lake",
+    "closeDate": "2026-06-25"
+  },
+  {
+    "id": 8,
+    "dealName": "E-Commerce Recommendation Engine",
+    "company": "Soylent Corp",
+    "stage": "Pipeline",
+    "value": 15000,
+    "priority": "Low",
+    "owner": "Emily Whalen",
+    "closeDate": "2026-07-30"
+  },
+  {
+    "id": 9,
+    "dealName": "Corporate Training CRM Licenses",
+    "company": "Tyrell Corp",
+    "stage": "At risk",
+    "value": 75000,
+    "priority": "Medium",
+    "owner": "Sarah Chen",
+    "closeDate": "2026-05-15"
+  },
+  {
+    "id": 10,
+    "dealName": "HR Analytics Portal",
+    "company": "Gekko & Co",
+    "stage": "Pipeline",
+    "value": 22000,
+    "priority": "Low",
+    "owner": "Emily Whalen",
+    "closeDate": "2026-08-10"
+  },
+  {
+    "id": 11,
+    "dealName": "Payment Gateway Integration",
+    "company": "Veerdyne",
+    "stage": "Closing this month",
+    "value": 12000,
+    "priority": "Medium",
+    "owner": "Eddie Lake",
+    "closeDate": "2026-06-05"
+  },
+  {
+    "id": 12,
+    "dealName": "Legacy Database Modernization",
+    "company": "Globex Corp",
+    "stage": "Pipeline",
+    "value": 95000,
+    "priority": "High",
+    "owner": "Carlos Rodriguez",
+    "closeDate": "2026-09-01"
+  }
+]

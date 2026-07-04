@@ -1,0 +1,86 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+model Contact {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  company   String?
+  status    String   // "Lead" | "MQL" | "SQL" | "Customer" | "Churned"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deals        Deal[]
+  tasks        Task[]
+  activityLogs ActivityLog[]
+}
+
+model Deal {
+  id                String    @id @default(uuid())
+  name              String
+  value             Float
+  stage             String    // "Lead" | "Contacted" | "Demo" | "Proposal" | "Negotiation" | "Closed Won" | "Closed Lost"
+  priority          String    // "Low" | "Medium" | "High"
+  expectedCloseDate DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Forecast Pulse Fields
+  pushedCount       Int       @default(0)
+  stageChangedAt    DateTime  @default(now())
+  description       String?
+  nextAction        String?
+  manualProbability Int?
+  overrideRiskFlag  Boolean   @default(false)
+  customRiskText    String?
+
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+model StageWeight {
+  stage       String   @id
+  probability Float
+}
+
+model DealSnapshot {
+  id                String    @id @default(uuid())
+  dealId            String
+  name              String
+  value             Float
+  stage             String
+  expectedCloseDate DateTime?
+  snapshotDate      DateTime  @default(now())
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  status      String    // "Pending" | "Completed"
+  priority    String    // "Low" | "Medium" | "High"
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  type      String   // "Call" | "Email" | "Meeting" | "Note"
+  content   String
+  createdAt DateTime @default(now())
+
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}
