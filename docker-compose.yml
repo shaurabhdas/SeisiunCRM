@@ -1,26 +1,6 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: apexcrm-db
-    restart: always
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - crm-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   backend:
     build:
       context: ./backend
@@ -35,9 +15,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    depends_on:
-      db:
-        condition: service_healthy
     command: sh -c "npx prisma db push && npm run prisma:seed && npm run dev"
     networks:
       - crm-network
@@ -60,9 +37,6 @@ services:
       - backend
     networks:
       - crm-network
-
-volumes:
-  postgres_data:
 
 networks:
   crm-network:

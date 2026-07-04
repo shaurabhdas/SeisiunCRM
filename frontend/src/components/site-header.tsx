@@ -1,9 +1,21 @@
+"use client"
+
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Sparkles } from "lucide-react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
+
+const breadcrumbLabels: Record<string, string> = {
+  "/dashboard/forecast-pulse": "Forecast Pulse",
+  "/dashboard/team-activity": "Team Activity",
+  "/leads": "Leads",
+};
 
 export function SiteHeader() {
+  const pathname = usePathname()
+  const currentLabel = breadcrumbLabels[pathname] || "Forecast Pulse"
+
   return (
     <header className="flex h-(--header-height) shrink-0 items-center justify-between gap-3 border-b bg-background px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 lg:px-6">
       <div className="flex min-w-0 items-center gap-2">
@@ -15,10 +27,10 @@ export function SiteHeader() {
         <nav aria-label="breadcrumb" className="text-sm">
           <ol className="flex items-center gap-1.5 text-muted-foreground">
             <li>
-              <Link href="/" className="hover:text-foreground transition-colors">PulseCRM</Link>
+              <Link href="/" className="hover:text-foreground transition-colors">Seisiun CRM</Link>
             </li>
             <li className="text-muted-foreground/50">/</li>
-            <li className="font-normal text-foreground">Forecast Pulse</li>
+            <li className="font-normal text-foreground">{currentLabel}</li>
           </ol>
         </nav>
       </div>

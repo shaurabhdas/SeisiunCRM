@@ -557,6 +557,313 @@ app.get('/api/team-activity/dormant-accounts', async (req, res) => {
   }
 });
 
+// Leads Workspace API Endpoints
+
+app.get('/api/leads', async (req, res) => {
+  try {
+    const leads = await prisma.lead.findMany({
+      include: {
+        account: true,
+        contacts: true,
+        activities: {
+          orderBy: { activityDate: 'desc' }
+        },
+        stageHistory: {
+          orderBy: { changedAt: 'desc' }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(leads);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch leads', details: String(error) });
+  }
+});
+
+app.get('/api/leads/regions', async (req, res) => {
+  try {
+    const accounts = await prisma.account.findMany({
+      select: { salesRegion: true },
+      distinct: ['salesRegion'],
+    });
+    const regions = accounts.map(a => a.salesRegion).filter(Boolean);
+    res.json(regions);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch sales regions', details: String(error) });
+  }
+});
+
+app.get('/api/leads/accounts', async (req, res) => {
+  try {
+    const accounts = await prisma.account.findMany({
+      orderBy: { name: 'asc' }
+    });
+    res.json(accounts);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch accounts', details: String(error) });
+  }
+});
+
+app.post('/api/leads', async (req, res) => {
+  try {
+    const { opportunityName, accountName, accountId, salesRegion, forecastCloseDate, painPoints } = req.body;
+    
+    let finalAccountId = accountId;
+    if (!finalAccountId && accountName) {
+      let existingAccount = await prisma.account.findFirst({
+        where: { name: { equals: accountName, mode: 'insensitive' } }
+      });
+      if (!existingAccount) {
+        existingAccount = await prisma.account.create({
+          data: {
+            name: accountName,
+            salesRegion: salesRegion || 'US East',
+          }
+        });
+      }
+      finalAccountId = existingAccount.id;
+    }
+
+    const newLead = await prisma.lead.create({
+      data: {
+        opportunityName,
+        accountId: finalAccountId || null,
+        stage: 'contact',
+        openDate: new Date(),
+        forecastCloseDate: forecastCloseDate ? new Date(forecastCloseDate) : null,
+        painPoints,
+      },
+      include: {
+        account: true,
+        contacts: true,
+        activities: true,
+        stageHistory: true,
+      }
+    });
+
+    await prisma.leadStageHistory.create({
+      data: {
+        leadId: newLead.id,
+        fromStage: null,
+        toStage: 'contact',
+      }
+    });
+
+    res.status(201).json(newLead);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create lead', details: String(error) });
+  }
+});
+
+app.post('/api/leads/:id/contacts', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { firstName, lastName, email, phone, stakeholderRole } = req.body;
+    
+    const lead = await prisma.lead.findUnique({
+      where: { id }
+    });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    const contact = await prisma.leadContact.create({
+      data: {
+        leadId: lead.id,
+        accountId: lead.accountId,
+        firstName,
+        lastName,
+        email,
+        phone,
+        stakeholderRole,
+      }
+    });
+    res.status(201).json(contact);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add contact', details: String(error) });
+  }
+});
+
+app.post('/api/leads/:id/activities', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { activityType, activityDate, note } = req.body;
+
+    const lead = await prisma.lead.findUnique({
+      where: { id }
+    });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    const activity = await prisma.leadActivity.create({
+      data: {
+        leadId: lead.id,
+        activityType,
+        activityDate: activityDate ? new Date(activityDate) : new Date(),
+        note,
+      }
+    });
+
+    res.status(201).json(activity);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to log activity', details: String(error) });
+  }
+});
+
+app.post('/api/leads/:id/disqualify', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const lead = await prisma.lead.findUnique({ where: { id } });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    const updatedLead = await prisma.lead.update({
+      where: { id },
+      data: {
+        stage: 'disqualified',
+        disqualificationReason: reason,
+      }
+    });
+
+    await prisma.leadStageHistory.create({
+      data: {
+        leadId: lead.id,
+        fromStage: lead.stage,
+        toStage: 'disqualified',
+      }
+    });
+
+    res.json(updatedLead);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to disqualify lead', details: String(error) });
+  }
+});
+
+app.put('/api/leads/:id/stage', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { toStage, postDemoOutcome } = req.body;
+
+    const lead = await prisma.lead.findUnique({
+      where: { id },
+      include: {
+        activities: true,
+        contacts: true,
+      }
+    });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    const fromStage = lead.stage;
+
+    if (toStage !== 'disqualified') {
+      if (fromStage === 'contact' && toStage === 'outreach') {
+        const hasEmail = lead.activities.some(a => a.activityType === 'email');
+        if (!hasEmail) return res.status(400).json({ error: 'At least one activity of type "email" is required to move to Outreach.' });
+      }
+      if (fromStage === 'outreach' && toStage === 'connected') {
+        const hasCallOrMeeting = lead.activities.some(a => ['call', 'meeting'].includes(a.activityType));
+        if (!hasCallOrMeeting) return res.status(400).json({ error: 'At least one activity of type "call" or "meeting" is required to move to Connected.' });
+      }
+      if (fromStage === 'connected' && toStage === 'presentation') {
+        if (lead.contacts.length === 0) return res.status(400).json({ error: 'At least one contact is required to move to Presentation.' });
+      }
+      if (fromStage === 'presentation' && toStage === 'demo') {
+        const hasPresentation = lead.activities.some(a => a.activityType === 'presentation');
+        if (!hasPresentation) return res.status(400).json({ error: 'At least one activity of type "presentation" is required to move to Demo.' });
+      }
+      if (fromStage === 'demo' && toStage === 'evaluating') {
+        const hasDemo = lead.activities.some(a => a.activityType === 'demo');
+        if (!hasDemo) return res.status(400).json({ error: 'At least one activity of type "demo" is required to move to Evaluating.' });
+        if (!lead.forecastCloseDate) return res.status(400).json({ error: 'Forecast Close Date must be set to move to Evaluating.' });
+        const hasBuyerOrDecisionMaker = lead.contacts.some(c => ['economic_buyer', 'decision_maker'].includes(c.stakeholderRole || ''));
+        if (!hasBuyerOrDecisionMaker) return res.status(400).json({ error: 'At least one contact with role "Economic Buyer" or "Decision Maker" is required to move to Evaluating.' });
+      }
+      if (fromStage === 'evaluating' && toStage === 'deal') {
+        if (!postDemoOutcome) return res.status(400).json({ error: 'A post demo outcome must be selected to close this lead.' });
+        if (['not_now', 'not_a_fit'].includes(postDemoOutcome)) {
+          await prisma.lead.update({
+            where: { id: lead.id },
+            data: {
+              stage: 'disqualified',
+              postDemoOutcome,
+              disqualificationReason: postDemoOutcome === 'not_now' ? 'no_timing' : 'no_need',
+            }
+          });
+          await prisma.leadStageHistory.create({
+            data: {
+              leadId: lead.id,
+              fromStage,
+              toStage: 'disqualified',
+            }
+          });
+          return res.json({ message: 'Lead disqualified as part of evaluating outcome.', stage: 'disqualified' });
+        }
+      }
+    }
+
+    const updatedLead = await prisma.lead.update({
+      where: { id },
+      data: {
+        stage: toStage,
+        postDemoOutcome: toStage === 'deal' || toStage === 'evaluating' ? postDemoOutcome : lead.postDemoOutcome,
+      }
+    });
+
+    await prisma.leadStageHistory.create({
+      data: {
+        leadId: lead.id,
+        fromStage,
+        toStage,
+      }
+    });
+
+    res.json(updatedLead);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to transition stage', details: String(error) });
+  }
+});
+
+app.put('/api/leads/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      opportunityName,
+      forecastCloseDate,
+      competitor,
+      painPoints,
+      salesRegion,
+      industry,
+      companySize,
+    } = req.body;
+
+    const lead = await prisma.lead.findUnique({ where: { id } });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    const updatedLead = await prisma.lead.update({
+      where: { id },
+      data: {
+        opportunityName: opportunityName !== undefined ? opportunityName : lead.opportunityName,
+        forecastCloseDate: forecastCloseDate !== undefined ? (forecastCloseDate ? new Date(forecastCloseDate) : null) : lead.forecastCloseDate,
+        competitor: competitor !== undefined ? competitor : lead.competitor,
+        painPoints: painPoints !== undefined ? painPoints : lead.painPoints,
+      }
+    });
+
+    if (lead.accountId && (salesRegion !== undefined || industry !== undefined || companySize !== undefined)) {
+      await prisma.account.update({
+        where: { id: lead.accountId },
+        data: {
+          salesRegion: salesRegion !== undefined ? salesRegion : undefined,
+          industry: industry !== undefined ? industry : undefined,
+          companySize: companySize !== undefined ? companySize : undefined,
+        }
+      });
+    }
+
+    res.json(updatedLead);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update lead details', details: String(error) });
+  }
+});
+
 // Start Server
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

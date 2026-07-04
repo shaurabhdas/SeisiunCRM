@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ApexCRM",
-  description: "Modern Customer Relationship Management Platform",
+  title: "Seisiun CRM",
+  description: "CRM built for Seisiun Analytics",
 };
 
 export default function RootLayout({

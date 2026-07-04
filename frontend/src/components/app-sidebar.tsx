@@ -80,12 +80,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     {
       title: "Leads",
       icon: UsersRound,
-      collapsible: true,
-      subItems: [
-        { name: "New Queue", url: "#" },
-        { name: "Qualified", url: "#" },
-        { name: "Imports", url: "#" }
-      ],
+      collapsible: false,
+      url: "/leads",
     },
     {
       title: "Contacts",
@@ -114,8 +110,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       collapsible: true,
       subItems: [
         { name: "Pipeline", url: "#" },
-        { name: "At risk", url: "#" },
-        { name: "Closing this month", url: "#" }
+        { name: "At risk", url: "#" }
       ],
     },
     {
@@ -158,7 +153,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <CircleGauge className="size-5" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold text-foreground">PulseCRM</span>
+                <span className="truncate font-semibold text-foreground">Seisiun CRM</span>
                 <span className="truncate text-xs text-muted-foreground">Revenue team</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4 text-muted-foreground/75" />
@@ -211,7 +206,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       )}
                     </div>
                   ) : (
-                    <SidebarMenuButton tooltip={item.title} render={<Link href="#" />}>
+                    <SidebarMenuButton tooltip={item.title} render={<Link href={item.url || "#"} />}>
                       <Icon className="size-4 shrink-0" />
                       <span>{item.title}</span>
                     </SidebarMenuButton>
