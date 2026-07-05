@@ -58,12 +58,12 @@ describe('calculateDaysSinceContact', () => {
     expect(calculateDaysSinceContact(localDateString)).toBe(0)
   })
 
-  it('correctly parses an ISO timestamp string with T component', () => {
-    const yesterday = new Date(Date.now() - 86400000).toISOString() // e.g. "2026-06-23T00:00:00.000Z"
-    expect(calculateDaysSinceContact(yesterday)).toBe(1)
+  it('handles ISO timestamp format returned by Supabase with time component', () => {
+    const isoString = new Date(Date.now() - 5 * 86400000).toISOString()
+    expect(calculateDaysSinceContact(isoString)).toBe(5)
   })
 
-  it('gracefully returns null for a malformed date string', () => {
+  it('returns null for a malformed date string instead of propagating NaN', () => {
     expect(calculateDaysSinceContact('not-a-date')).toBeNull()
   })
 })
