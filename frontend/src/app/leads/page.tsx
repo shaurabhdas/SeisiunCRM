@@ -28,6 +28,12 @@ import {
   MoreVertical
 } from "lucide-react"
 
+import {
+  calculateDaysSinceContact,
+  getFollowUpColorToken,
+  formatFollowUpDisplay
+} from "@/lib/followup"
+
 interface Account {
   id: string
   name: string
@@ -582,45 +588,27 @@ export default function LeadsPage() {
 
   // Follow-up dot indicator calculations
   const getFollowUpInfo = (lead: Lead) => {
-    if (!lead.lastConnectDate) {
-      return {
-        text: "No contact",
-        colorClass: "bg-(--followup-critical)",
-        textClass: "font-bold text-(--followup-critical)",
-        days: 999
-      }
-    }
-    const diffTime = Math.abs(new Date().getTime() - new Date(lead.lastConnectDate).getTime())
-    const days = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-    
-    if (days >= 10) {
-      return {
-        text: `${days}d`,
-        colorClass: "bg-(--followup-critical)",
-        textClass: "font-bold text-foreground",
-        days
-      }
+    const days = calculateDaysSinceContact(lead.lastConnectDate)
+    const token = getFollowUpColorToken(days)
+    const text = formatFollowUpDisplay(days)
+
+    let colorClass = "bg-(--followup-safe)"
+    if (token === "--followup-critical") colorClass = "bg-(--followup-critical)"
+    else if (token === "--followup-urgent") colorClass = "bg-(--followup-urgent)"
+    else if (token === "--followup-warning") colorClass = "bg-(--followup-warning)"
+
+    let textClass = "text-foreground font-normal"
+    if (days === null) {
+      textClass = "font-bold text-(--followup-critical)"
     } else if (days >= 7) {
-      return {
-        text: `${days}d`,
-        colorClass: "bg-(--followup-urgent)",
-        textClass: "font-bold text-foreground",
-        days
-      }
-    } else if (days >= 3) {
-      return {
-        text: `${days}d`,
-        colorClass: "bg-(--followup-warning)",
-        textClass: "text-foreground font-normal",
-        days
-      }
-    } else {
-      return {
-        text: `${days}d`,
-        colorClass: "bg-(--followup-safe)",
-        textClass: "text-foreground font-normal",
-        days
-      }
+      textClass = "font-bold text-foreground"
+    }
+
+    return {
+      text,
+      colorClass,
+      textClass,
+      days: days === null ? 999 : days
     }
   }
 
