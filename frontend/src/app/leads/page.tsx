@@ -28,6 +28,8 @@ import {
   MoreVertical
 } from "lucide-react"
 
+import { useSearchParams, useRouter } from "next/navigation"
+
 import {
   calculateDaysSinceContact,
   getFollowUpColorToken,
@@ -93,7 +95,11 @@ interface Lead {
   stageHistory: StageHistory[]
 }
 
-export default function LeadsPage() {
+function LeadsPageContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const urlLeadId = searchParams.get('lead')
+
   const [leads, setLeads] = React.useState<Lead[]>([])
   const [regions, setRegions] = React.useState<string[]>([])
   const [allAccounts, setAllAccounts] = React.useState<Account[]>([])
@@ -186,6 +192,36 @@ export default function LeadsPage() {
     fetchRegions()
     fetchAccounts()
   }, [])
+
+  // 1. Sync urlLeadId changes to selectedLeadId state
+  React.useEffect(() => {
+    if (leads.length > 0) {
+      if (urlLeadId) {
+        const matched = leads.find(l => l.id === urlLeadId)
+        if (matched) {
+          setSelectedLeadId(urlLeadId)
+        } else {
+          setSelectedLeadId(null)
+        }
+      } else {
+        setSelectedLeadId(null)
+      }
+    }
+  }, [urlLeadId, leads])
+
+  // 2. Sync selectedLeadId state changes back to URL
+  React.useEffect(() => {
+    const currentLead = searchParams.get('lead')
+    if (selectedLeadId) {
+      if (currentLead !== selectedLeadId) {
+        router.replace(`/leads?lead=${selectedLeadId}`)
+      }
+    } else {
+      if (currentLead) {
+        router.replace('/leads')
+      }
+    }
+  }, [selectedLeadId, router, searchParams])
 
   const fetchLeads = async () => {
     try {
@@ -1834,5 +1870,17 @@ export default function LeadsPage() {
       )}
 
     </SidebarProvider>
+  )
+}
+
+export default function LeadsPage() {
+  return (
+    <React.Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-[#f7f7f2] dark:bg-zinc-950/40 text-xs text-muted-foreground">
+        Loading Leads Workspace...
+      </div>
+    }>
+      <LeadsPageContent />
+    </React.Suspense>
   )
 }
