@@ -17,6 +17,19 @@ const STAGE_PROBABILITIES: Record<string, number> = {
   evaluating: 90
 }
 
+function calculateDays(dateStr: string | null): number | null {
+  if (!dateStr) return null
+  const dateOnly = dateStr.split('T')[0]
+  const today = new Date()
+  const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+  const [year, month, day] = dateOnly.split('-').map(Number)
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null
+  const lastUTC = Date.UTC(year, month - 1, day)
+  const diffTime = todayUTC - lastUTC
+  if (diffTime < 0) return 0
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24))
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { data: leads, error: leadsErr } = await supabase.from('leads').select('*')
@@ -31,6 +44,13 @@ export async function GET(request: NextRequest) {
     const { data: activities, error: activitiesErr } = await supabase.from('lead_activities').select('*')
     if (activitiesErr) throw activitiesErr
 
+    // Fetch Deals and Deal Activities
+    const { data: dealsData, error: dealsErr } = await supabase.from('deals').select('*')
+    if (dealsErr) throw dealsErr
+
+    const { data: dealActivities, error: dealActsErr } = await supabase.from('deal_activities').select('*')
+    if (dealActsErr) throw dealActsErr
+
     const activeLeads = (leads || []).filter(l => l.stage !== 'disqualified')
     const accountMap = new Map((accounts || []).map(a => [a.id, a.name]))
 
@@ -38,7 +58,8 @@ export async function GET(request: NextRequest) {
     const fourteenDaysAgo = new Date()
     fourteenDaysAgo.setDate(now.getDate() - 14)
 
-    const result = activeLeads.map(l => {
+    // Map Leads
+    const leadRows = activeLeads.map(l => {
       const leadContacts = (contacts || []).filter(c => c.lead_id === l.id)
       const leadActivities = (activities || []).filter(act => act.lead_id === l.id)
 
@@ -61,6 +82,7 @@ export async function GET(request: NextRequest) {
 
       return {
         id: l.id,
+        isDeal: false,
         account: accountMap.get(l.account_id) || 'Unknown',
         dealName: l.opportunity_name,
         dealSize: formatK(Number(l.deal_value || 0)),
@@ -80,6 +102,76 @@ export async function GET(request: NextRequest) {
         expectedCloseDate: l.forecast_close_date
       }
     })
+
+    // Filter active deals: proposal_submitted or negotiation
+    const activeDeals = (dealsData || []).filter(d => ['proposal_submitted', 'negotiation'].includes(d.stage))
+
+    // Map Deals
+    const dealRows = activeDeals.map(d => {
+      const dActivities = (dealActivities || []).filter(act => act.deal_id === d.id)
+        .sort((a, b) => new Date(b.activity_date).getTime() - new Date(a.activity_date).getTime())
+
+      const lastActDate = dActivities.length > 0 ? dActivities[0].activity_date : null
+      const daysSinceAct = calculateDays(lastActDate)
+
+      const riskFlags: string[] = []
+      if (daysSinceAct === null || daysSinceAct >= 7) {
+        riskFlags.push('Stale deal')
+      }
+
+      // Convert stage to display format
+      const displayStage = d.stage === 'proposal_submitted' ? 'Proposal' : 'Negotiation'
+
+      return {
+        id: d.id,
+        isDeal: true,
+        account: accountMap.get(d.account_id) || 'Unknown',
+        dealName: d.opportunity_name,
+        dealSize: formatK(Number(d.reported_value || 0)),
+        value: Number(d.reported_value || 0),
+        stageProbability: d.value_confidence === 'confirmed' ? 'Confirmed' : 'Estimated',
+        stageProbabilityRaw: d.value_confidence === 'confirmed' ? 100 : 50,
+        step: displayStage,
+        lastAction: daysSinceAct === null ? 'No activity' : `${daysSinceAct} days ago`,
+        riskFlags,
+        valueArrow: 'stable',
+        timelineArrow: 'stable',
+        activityVelocity: 'DEAL',
+        activityCount: dActivities.length,
+        overrideRiskFlag: false,
+        customRiskText: null,
+        manualProbability: null,
+        expectedCloseDate: d.forecast_close_date
+      }
+    })
+
+    // Combine with visual separator if there are deals
+    const result = [...leadRows]
+    if (dealRows.length > 0) {
+      result.push({
+        id: 'separator-active-deals',
+        isSeparator: true,
+        account: 'Active Deals',
+        dealName: '',
+        dealSize: '',
+        value: 0,
+        stageProbability: '',
+        stageProbabilityRaw: 0,
+        step: '',
+        lastAction: '',
+        riskFlags: [],
+        valueArrow: 'stable',
+        timelineArrow: 'stable',
+        activityVelocity: '',
+        activityCount: 0,
+        overrideRiskFlag: false,
+        customRiskText: null,
+        manualProbability: null,
+        expectedCloseDate: null,
+        isDeal: false
+      } as any)
+      result.push(...dealRows)
+    }
 
     return NextResponse.json(result)
   } catch (error) {

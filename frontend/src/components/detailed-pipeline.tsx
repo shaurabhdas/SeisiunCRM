@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { 
   ArrowUpRight, 
   ArrowDownRight, 
@@ -49,6 +50,8 @@ interface DealRow {
   customRiskText: string | null
   manualProbability: number | null
   expectedCloseDate: string | null
+  isSeparator?: boolean
+  isDeal?: boolean
 }
 
 export function DetailedPipeline({ 
@@ -58,6 +61,7 @@ export function DetailedPipeline({
   refreshKey: number
   onRefresh: () => void 
 }) {
+  const router = useRouter()
   const [deals, setDeals] = React.useState<DealRow[]>([])
   const [loading, setLoading] = React.useState(true)
   const [selectedDeal, setSelectedDeal] = React.useState<DealRow | null>(null)
@@ -89,6 +93,11 @@ export function DetailedPipeline({
   }, [refreshKey])
 
   const handleRowClick = (deal: DealRow) => {
+    if (deal.isSeparator) return
+    if (deal.isDeal) {
+      router.push(`/deals/pipeline?deal=${deal.id}`)
+      return
+    }
     setSelectedDeal(deal)
     setEditValue(deal.value.toString())
     setEditStage(deal.step)
@@ -190,18 +199,36 @@ export function DetailedPipeline({
                   </td>
                 </tr>
               ) : (
-                deals.map((deal) => (
-                  <tr 
-                    key={deal.id} 
-                    onClick={() => handleRowClick(deal)}
-                    className="hover:bg-muted/40 transition-colors cursor-pointer group"
-                  >
-                    <td className="py-3.5 px-2 font-medium text-foreground">
-                      {deal.account}
-                      <span className="block text-xs text-muted-foreground font-normal mt-0.5">
-                        {deal.dealName}
-                      </span>
-                    </td>
+                deals.map((deal) => {
+                  if (deal.isSeparator) {
+                    return (
+                      <tr key={deal.id} className="bg-muted/30 border-y select-none">
+                        <td colSpan={6} className="py-2.5 px-4 font-bold text-xs uppercase tracking-wider text-muted-foreground/80">
+                          {deal.account}
+                        </td>
+                      </tr>
+                    )
+                  }
+
+                  return (
+                    <tr 
+                      key={deal.id} 
+                      onClick={() => handleRowClick(deal)}
+                      className="hover:bg-muted/40 transition-colors cursor-pointer group"
+                    >
+                      <td className="py-3.5 px-2 font-medium text-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <span>{deal.account}</span>
+                          {deal.isDeal && (
+                            <span className="text-[9px] bg-teal-100 text-teal-800 dark:bg-teal-950/40 dark:text-teal-400 font-bold px-1.5 py-0.5 rounded">
+                              DEAL
+                            </span>
+                          )}
+                        </div>
+                        <span className="block text-xs text-muted-foreground font-normal mt-0.5">
+                          {deal.dealName}
+                        </span>
+                      </td>
                     <td className="py-3.5 px-2 font-semibold text-foreground">{deal.dealSize}</td>
                     <td className="py-3.5 px-2 font-semibold">
                       <div className="flex items-center gap-1.5">
@@ -243,8 +270,9 @@ export function DetailedPipeline({
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                )
+              })
+            )}
             </tbody>
           </table>
         </div>

@@ -105,8 +105,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: Handshake,
       collapsible: true,
       subItems: [
-        { name: "Pipeline", url: "#" },
-        { name: "At risk", url: "#" }
+        { name: "Pipeline", url: "/deals/pipeline" },
+        { name: "At risk", url: "/deals/at-risk" }
       ],
     },
     {
@@ -172,23 +172,42 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <SidebarMenuItem key={item.title}>
                   {item.collapsible ? (
                     <div className="flex flex-col w-full">
-                      <button
-                        onClick={() => {
-                          toggleItem(item.title)
-                          if (item.title === "Dashboard") {
-                            router.push("/dashboard")
-                          }
-                        }}
-                        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                      >
-                        <Icon className="size-4 shrink-0" />
-                        <span className="flex-1">{item.title}</span>
-                        {isOpen ? (
-                          <ChevronDown className="size-4 text-muted-foreground/75 shrink-0" />
-                        ) : (
-                          <ChevronRight className="size-4 text-muted-foreground/75 shrink-0" />
-                        )}
-                      </button>
+                      {(() => {
+                        const href = item.title === "Dashboard" ? "/dashboard" : item.title === "Deals" ? "/deals/pipeline" : undefined
+                        const content = (
+                          <>
+                            <Icon className="size-4 shrink-0" />
+                            <span className="flex-1">{item.title}</span>
+                            {isOpen ? (
+                              <ChevronDown className="size-4 text-muted-foreground/75 shrink-0" />
+                            ) : (
+                              <ChevronRight className="size-4 text-muted-foreground/75 shrink-0" />
+                            )}
+                          </>
+                        )
+                        const className = "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        
+                        if (href) {
+                          return (
+                            <Link
+                              href={href}
+                              onClick={() => toggleItem(item.title)}
+                              className={className}
+                            >
+                              {content}
+                            </Link>
+                          )
+                        }
+
+                        return (
+                          <button
+                            onClick={() => toggleItem(item.title)}
+                            className={className}
+                          >
+                            {content}
+                          </button>
+                        )
+                      })()}
                       {isOpen && hasSubItems && (
                         <SidebarMenuSub className="mx-2 mt-0.5 border-l border-sidebar-border px-2.5 py-0.5">
                           {item.subItems!.map((sub) => (
