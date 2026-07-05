@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
+import { fetchAccountsWithMetrics } from '@/lib/accounts'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_TEST_URL!,
@@ -401,6 +402,193 @@ describe('Account metrics queries', () => {
     // 4. Clean up contacts and the temp lead
     await supabase.from('contacts').delete().eq('account_id', testAccountId)
     await supabase.from('leads').delete().eq('id', lead.id)
+  })
+})
+
+describe('fetchAccountsWithMetrics: deduplication and activity integrity', () => {
+
+  let dedupAccountId: string
+  let dedupLead1Id: string
+  let dedupLead2Id: string
+  let activityAccountId: string
+  let activityLeadId: string
+
+  afterAll(async () => {
+    const dedupLeadIds = [dedupLead1Id, dedupLead2Id].filter(Boolean)
+    if (dedupLeadIds.length > 0) {
+      await supabase.from('lead_activities').delete().in('lead_id', dedupLeadIds)
+      await supabase.from('lead_stage_history').delete().in('lead_id', dedupLeadIds)
+      await supabase.from('contacts').delete().in('lead_id', dedupLeadIds)
+      await supabase.from('leads').delete().in('id', dedupLeadIds)
+    }
+    if (activityLeadId) {
+      await supabase.from('lead_activities').delete().eq('lead_id', activityLeadId)
+      await supabase.from('lead_stage_history').delete().eq('lead_id', activityLeadId)
+      await supabase.from('leads').delete().eq('id', activityLeadId)
+    }
+    if (dedupAccountId) {
+      await supabase.from('accounts').delete().eq('id', dedupAccountId)
+    }
+    if (activityAccountId) {
+      await supabase.from('accounts').delete().eq('id', activityAccountId)
+    }
+  })
+
+  it('deduplicates contacts sharing the same email across multiple leads under one account', async () => {
+    const { data: account, error: accountErr } = await supabase
+      .from('accounts')
+      .insert({
+        name: 'Dedup Test Corp',
+        industry: 'Technology',
+        sales_region: 'US East',
+      })
+      .select()
+      .single()
+
+    expect(accountErr).toBeNull()
+    dedupAccountId = account.id
+
+    const today = new Date().toISOString().split('T')[0]
+
+    const { data: lead1, error: lead1Err } = await supabase
+      .from('leads')
+      .insert({
+        opportunity_name: 'Dedup Lead One',
+        account_id: dedupAccountId,
+        stage: 'connected',
+        open_date: today,
+        forecast_close_date: '2026-12-31',
+        sales_region: 'US East',
+      })
+      .select()
+      .single()
+
+    expect(lead1Err).toBeNull()
+    dedupLead1Id = lead1.id
+
+    const { data: lead2, error: lead2Err } = await supabase
+      .from('leads')
+      .insert({
+        opportunity_name: 'Dedup Lead Two',
+        account_id: dedupAccountId,
+        stage: 'outreach',
+        open_date: today,
+        forecast_close_date: '2026-12-31',
+        sales_region: 'US East',
+      })
+      .select()
+      .single()
+
+    expect(lead2Err).toBeNull()
+    dedupLead2Id = lead2.id
+
+    // Insert the same contact email under both leads, simulating
+    // a stakeholder involved in two parallel conversations
+    const { error: contactErr } = await supabase
+      .from('contacts')
+      .insert([
+        {
+          lead_id: dedupLead1Id,
+          account_id: dedupAccountId,
+          first_name: 'Jane',
+          last_name: 'Smith',
+          email: 'jane.smith@dedupcorp.com',
+          stakeholder_role: 'champion',
+        },
+        {
+          lead_id: dedupLead2Id,
+          account_id: dedupAccountId,
+          first_name: 'Jane',
+          last_name: 'Smith',
+          email: 'jane.smith@dedupcorp.com',
+          stakeholder_role: 'champion',
+        },
+      ])
+
+    expect(contactErr).toBeNull()
+
+    const accounts = await fetchAccountsWithMetrics()
+    const testAccount = accounts.find(a => a.id === dedupAccountId)
+
+    expect(testAccount).toBeDefined()
+    expect(testAccount!.contacts.length).toBe(1)
+    expect(testAccount!.contacts[0].email).toBe('jane.smith@dedupcorp.com')
+  })
+
+  it('returns the correct activity count with no duplicates and sorted by date descending', async () => {
+    const { data: account, error: accountErr } = await supabase
+      .from('accounts')
+      .insert({
+        name: 'Activity Count Corp',
+        industry: 'Finance',
+        sales_region: 'US West',
+      })
+      .select()
+      .single()
+
+    expect(accountErr).toBeNull()
+    activityAccountId = account.id
+
+    const today = new Date().toISOString().split('T')[0]
+
+    const { data: lead, error: leadErr } = await supabase
+      .from('leads')
+      .insert({
+        opportunity_name: 'Activity Test Lead',
+        account_id: activityAccountId,
+        stage: 'demo',
+        open_date: today,
+        forecast_close_date: '2026-12-31',
+        sales_region: 'US West',
+      })
+      .select()
+      .single()
+
+    expect(leadErr).toBeNull()
+    activityLeadId = lead.id
+
+    const { error: activityErr } = await supabase
+      .from('lead_activities')
+      .insert([
+        {
+          lead_id: activityLeadId,
+          activity_type: 'email',
+          activity_date: '2026-06-01',
+          note: 'Initial outreach email.',
+        },
+        {
+          lead_id: activityLeadId,
+          activity_type: 'call',
+          activity_date: '2026-06-15',
+          note: 'Follow up call with stakeholder.',
+        },
+        {
+          lead_id: activityLeadId,
+          activity_type: 'demo',
+          activity_date: '2026-06-28',
+          note: 'Full product demo delivered.',
+        },
+      ])
+
+    expect(activityErr).toBeNull()
+
+    const accounts = await fetchAccountsWithMetrics()
+    const testAccount = accounts.find(a => a.id === activityAccountId)
+
+    expect(testAccount).toBeDefined()
+    expect(testAccount!.recentActivities.length).toBe(3)
+
+    // Verify descending sort: most recent activity must appear first
+    const dates = testAccount!.recentActivities.map(a => a.activity_date.split('T')[0])
+    expect(dates[0]).toBe('2026-06-28')
+    expect(dates[1]).toBe('2026-06-15')
+    expect(dates[2]).toBe('2026-06-01')
+
+    // Verify each activity maps back to the correct lead
+    testAccount!.recentActivities.forEach(a => {
+      expect(a.lead_id).toBe(activityLeadId)
+      expect(a.opportunity_name).toBe('Activity Test Lead')
+    })
   })
 })
 
