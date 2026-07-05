@@ -68,11 +68,6 @@ export function PulseCards({ refreshKey }: { refreshKey: number }) {
         <p className="text-sm font-medium text-muted-foreground">Best case</p>
         <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">{kpis.bestCase}</p>
         <p className="mt-2 text-sm text-muted-foreground">{kpis.activeOpportunitiesCount} active opportunities</p>
-        {kpis.newlyQualifiedValue > 0 && (
-          <div className="mt-4 inline-block rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
-            +{formatK(kpis.newlyQualifiedValue)} newly qualified
-          </div>
-        )}
       </Card>
 
       {/* Likely Slip */}
