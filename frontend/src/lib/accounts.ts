@@ -1,11 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { calculateDaysSinceContact } from './followup'
 
-// Schema environment setup
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_TEST_URL || 'https://jdbgqlueshcyjvuoxpcr.supabase.co'
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_TEST_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkYmdxbHVlc2hjeWp2dW94cGNyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MzE5MDk3NCwiZXhwIjoyMDk4NzY2OTc0fQ.4C6RVCLFT12-FfwwGxuB4tMOtHs6F0YgziPUGGqDa8I'
-const supabaseSchema = process.env.SUPABASE_DB_SCHEMA || process.env.SUPABASE_TEST_SCHEMA || 'public'
-
 const isTest = typeof window === 'undefined' && process.env.NODE_ENV === 'test'
 let ws: any = null
 if (isTest) {
@@ -16,11 +11,28 @@ if (isTest) {
   }
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-  db: {
-    schema: supabaseSchema
-  },
-  ...(ws ? { realtime: { transport: ws } } : {})
+let _supabaseClient: any = null
+export const supabase = new Proxy({} as any, {
+  get(target, prop) {
+    if (!_supabaseClient) {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_TEST_URL
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_TEST_SERVICE_KEY
+
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Missing Supabase credentials. Check your environment variables.')
+      }
+
+      const supabaseSchema = process.env.SUPABASE_DB_SCHEMA || process.env.SUPABASE_TEST_SCHEMA || 'public'
+
+      _supabaseClient = createClient(supabaseUrl, supabaseKey, {
+        db: {
+          schema: supabaseSchema
+        },
+        ...(ws ? { realtime: { transport: ws } } : {})
+      })
+    }
+    return _supabaseClient[prop]
+  }
 })
 
 export type AccountWithMetrics = {
