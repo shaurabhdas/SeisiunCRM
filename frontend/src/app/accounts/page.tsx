@@ -43,8 +43,8 @@ function AccountsPageContent() {
   const [selectedRegion, setSelectedRegion] = React.useState<string>("All Regions")
   const [selectedIndustry, setSelectedIndustry] = React.useState<string>("All Industries")
 
-  // Selected Account (Zone C)
-  const [selectedAccountId, setSelectedAccountId] = React.useState<string | null>(null)
+  // Selected Account (Zone C) - derived from URL query parameter (Single Source of Truth)
+  const selectedAccountId = urlAccountId
 
   // Collapsible sections state
   const [collapsedSections, setCollapsedSections] = React.useState<Record<string, boolean>>({
@@ -129,35 +129,7 @@ function AccountsPageContent() {
     }
   }
 
-  // 1. Sync urlAccountId changes to selectedAccountId state
-  React.useEffect(() => {
-    if (accounts.length > 0) {
-      if (urlAccountId) {
-        const matched = accounts.find(a => a.id === urlAccountId)
-        if (matched) {
-          setSelectedAccountId(urlAccountId)
-        } else {
-          setSelectedAccountId(null)
-        }
-      } else {
-        setSelectedAccountId(null)
-      }
-    }
-  }, [urlAccountId, accounts])
-
-  // 2. Sync selectedAccountId state changes back to URL
-  React.useEffect(() => {
-    const currentParam = searchParams.get('account')
-    if (selectedAccountId) {
-      if (currentParam !== selectedAccountId) {
-        router.replace(`/accounts?account=${selectedAccountId}`)
-      }
-    } else {
-      if (currentParam) {
-        router.replace('/accounts')
-      }
-    }
-  }, [selectedAccountId, router, searchParams])
+  // URL parameter is the single source of truth, no synchronization effects needed
 
   const selectedAccount = accounts.find(a => a.id === selectedAccountId)
 
@@ -200,8 +172,8 @@ function AccountsPageContent() {
         notes: ""
       })
 
-      // Immediately open Zone C for new account
-      setSelectedAccountId(createdAccount.id)
+      // Immediately open Zone C for new account by navigating
+      router.replace(`/accounts?account=${createdAccount.id}`)
     } catch (err) {
       console.error("Error creating account:", err)
     }
@@ -244,7 +216,7 @@ function AccountsPageContent() {
 
       if (!res.ok) throw new Error("Failed to delete account")
 
-      setSelectedAccountId(null)
+      router.replace('/accounts')
       setIsDeleteAccountOpen(false)
       await loadAccountsData()
     } catch (err) {
@@ -547,7 +519,7 @@ function AccountsPageContent() {
                           <tr 
                             key={account.id}
                             style={borderStyle}
-                            onClick={() => setSelectedAccountId(account.id)}
+                            onClick={() => router.replace(`/accounts?account=${account.id}`)}
                             className={`cursor-pointer transition-colors hover:bg-(--secondary) border-b last:border-0
                               ${isSelected ? 'bg-indigo-50/20 dark:bg-indigo-950/5 font-medium' : 'bg-card'}
                             `}
@@ -676,7 +648,7 @@ function AccountsPageContent() {
                     </div>
 
                     <button 
-                      onClick={() => setSelectedAccountId(null)}
+                      onClick={() => router.replace('/accounts')}
                       className="rounded-md p-1 text-muted-foreground hover:bg-muted"
                     >
                       <X className="size-4" />
