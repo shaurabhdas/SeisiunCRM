@@ -10,6 +10,7 @@ const breadcrumbLabels: Record<string, string> = {
   "/dashboard/forecast-pulse": "Forecast Pulse",
   "/dashboard/team-activity": "Team Activity",
   "/leads": "Leads",
+  "/accounts": "Accounts",
 };
 
 export function SiteHeader() {

@@ -61,6 +61,7 @@ function AccountsPageContent() {
 
   // Inline forms in Zone C
   const [isAddingLead, setIsAddingLead] = React.useState(false)
+  const [showDisqualifiedLeads, setShowDisqualifiedLeads] = React.useState(false)
   const [isAddingContact, setIsAddingContact] = React.useState(false)
 
   // Dropdown menu state
@@ -147,6 +148,13 @@ function AccountsPageContent() {
   }, [selectedAccountId])
 
   const selectedAccount = accounts.find(a => a.id === selectedAccountId)
+
+  const visibleLeads = selectedAccount
+    ? selectedAccount.leads.filter(lead => showDisqualifiedLeads || lead.stage !== 'disqualified')
+    : []
+  const disqualifiedCount = selectedAccount
+    ? selectedAccount.leads.filter(lead => lead.stage === 'disqualified').length
+    : 0
 
   // Toggle collapsible section
   const toggleSection = (section: string) => {
@@ -801,13 +809,28 @@ function AccountsPageContent() {
                       onClick={() => toggleSection('leads')}
                       className="flex w-full items-center justify-between font-bold text-2xs uppercase tracking-wider text-muted-foreground mb-3"
                     >
-                      <span>Leads ({selectedAccount.leads.length})</span>
+                      <span>Leads ({selectedAccount.leads.filter(l => l.stage !== 'disqualified').length})</span>
                       {collapsedSections.leads ? <ChevronRight className="size-3.5" /> : <ChevronDown className="size-3.5" />}
                     </button>
 
                     {!collapsedSections.leads && (
                       <div className="space-y-3">
-                        {selectedAccount.leads.length === 0 ? (
+                        {/* Toggle for Disqualified if any exist */}
+                        {disqualifiedCount > 0 && (
+                          <div className="flex justify-end pr-1">
+                            <label className="flex items-center gap-1.5 text-3xs font-semibold text-muted-foreground cursor-pointer select-none">
+                              <input 
+                                type="checkbox" 
+                                checked={showDisqualifiedLeads}
+                                onChange={(e) => setShowDisqualifiedLeads(e.target.checked)}
+                                className="rounded border-muted text-indigo-600 focus:ring-0 size-2.5 bg-card"
+                              />
+                              <span>Show Disqualified ({disqualifiedCount})</span>
+                            </label>
+                          </div>
+                        )}
+
+                        {visibleLeads.length === 0 ? (
                           <div className="border border-dashed rounded-lg p-4 text-center bg-muted/5">
                             <p className="text-muted-foreground text-xs">No active leads under this account.</p>
                             
@@ -882,7 +905,7 @@ function AccountsPageContent() {
                           </div>
                         ) : (
                           <div className="space-y-2">
-                            {selectedAccount.leads.map((lead) => {
+                            {visibleLeads.map((lead) => {
                               const daysSince = calculateDaysSinceContact(lead.last_connect_date)
                               const followUpDisplay = formatFollowUpDisplay(daysSince)
                               const followUpColor = getFollowUpColorToken(daysSince)
