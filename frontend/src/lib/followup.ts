@@ -2,13 +2,15 @@ export function calculateDaysSinceContact(
   lastConnectDate: string | null
 ): number | null {
   if (!lastConnectDate) return null
+  const dateOnly = lastConnectDate.split('T')[0]
   const today = new Date()
   const todayUTC = Date.UTC(
     today.getFullYear(),
     today.getMonth(),
     today.getDate()
   )
-  const [year, month, day] = lastConnectDate.split('-').map(Number)
+  const [year, month, day] = dateOnly.split('-').map(Number)
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null
   const lastUTC = Date.UTC(year, month - 1, day)
   const diffTime = todayUTC - lastUTC
   if (diffTime < 0) return 0

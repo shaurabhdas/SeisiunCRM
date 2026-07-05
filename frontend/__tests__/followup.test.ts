@@ -57,6 +57,15 @@ describe('calculateDaysSinceContact', () => {
     ].join('-')
     expect(calculateDaysSinceContact(localDateString)).toBe(0)
   })
+
+  it('correctly parses an ISO timestamp string with T component', () => {
+    const yesterday = new Date(Date.now() - 86400000).toISOString() // e.g. "2026-06-23T00:00:00.000Z"
+    expect(calculateDaysSinceContact(yesterday)).toBe(1)
+  })
+
+  it('gracefully returns null for a malformed date string', () => {
+    expect(calculateDaysSinceContact('not-a-date')).toBeNull()
+  })
 })
 
 describe('getFollowUpColorToken', () => {
