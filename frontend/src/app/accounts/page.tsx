@@ -162,7 +162,7 @@ function AccountsPageContent() {
     if (!newAccountForm.name.trim()) return
 
     try {
-      const res = await fetch('/api/accounts', {
+      const res = await fetch(`${apiUrl}/accounts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -202,7 +202,7 @@ function AccountsPageContent() {
     if (!selectedAccountId) return
 
     try {
-      const res = await fetch(`/api/accounts/${selectedAccountId}`, {
+      const res = await fetch(`${apiUrl}/accounts/${selectedAccountId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -227,7 +227,7 @@ function AccountsPageContent() {
     if (!selectedAccountId) return
 
     try {
-      const res = await fetch(`/api/accounts/${selectedAccountId}`, {
+      const res = await fetch(`${apiUrl}/accounts/${selectedAccountId}`, {
         method: "DELETE"
       })
 

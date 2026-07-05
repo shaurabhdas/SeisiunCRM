@@ -897,6 +897,68 @@ app.delete('/api/leads/:id', async (req, res) => {
   }
 });
 
+// Accounts Write Endpoints
+app.post('/api/accounts', async (req, res) => {
+  try {
+    const { name, industry, company_size, sales_region, notes } = req.body;
+    const account = await prisma.account.create({
+      data: {
+        name,
+        industry: industry || null,
+        companySize: company_size || null,
+        salesRegion: sales_region || 'US East',
+        notes: notes || null
+      }
+    });
+    res.status(201).json(account);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create account', details: String(error) });
+  }
+});
+
+app.put('/api/accounts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, industry, company_size, sales_region, notes } = req.body;
+    const account = await prisma.account.update({
+      where: { id },
+      data: {
+        name,
+        industry: industry || null,
+        companySize: company_size || null,
+        salesRegion: sales_region || 'US East',
+        notes: notes || null
+      }
+    });
+    res.json(account);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update account', details: String(error) });
+  }
+});
+
+app.delete('/api/accounts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Cascade delete via Prisma
+    const leads = await prisma.lead.findMany({ where: { accountId: id } });
+    const leadIds = leads.map(l => l.id);
+
+    if (leadIds.length > 0) {
+      await prisma.leadActivity.deleteMany({ where: { leadId: { in: leadIds } } });
+      await prisma.leadStageHistory.deleteMany({ where: { leadId: { in: leadIds } } });
+    }
+
+    await prisma.leadContact.deleteMany({ where: { accountId: id } });
+    await prisma.lead.deleteMany({ where: { accountId: id } });
+    await prisma.account.delete({ where: { id } });
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete account', details: String(error) });
+  }
+});
+
 // Start Server
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
