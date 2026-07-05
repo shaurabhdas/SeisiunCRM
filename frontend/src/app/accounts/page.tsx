@@ -110,7 +110,7 @@ function AccountsPageContent() {
   const loadAccountsData = async () => {
     try {
       setLoading(true)
-      const res = await fetch('/api/accounts')
+      const res = await fetch(`/api/accounts?t=${Date.now()}`)
       if (!res.ok) throw new Error("Failed to fetch accounts")
       const data = await res.json()
       setAccounts(data)
@@ -162,7 +162,6 @@ function AccountsPageContent() {
       if (!res.ok) throw new Error("Failed to create account")
       const createdAccount = await res.json()
 
-      await loadAccountsData()
       setIsAddAccountOpen(false)
       setNewAccountForm({
         name: "",
@@ -174,6 +173,9 @@ function AccountsPageContent() {
 
       // Immediately open Zone C for new account by navigating
       router.replace(`/accounts?account=${createdAccount.id}`)
+
+      // Refetch accounts in the background
+      await loadAccountsData()
     } catch (err) {
       console.error("Error creating account:", err)
     }
