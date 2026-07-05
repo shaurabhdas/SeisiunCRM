@@ -21,19 +21,25 @@ const supabaseSchema = process.env.SUPABASE_DB_SCHEMA
   || process.env.SUPABASE_TEST_SCHEMA
   || 'public'
 
-if (!supabaseUrl || !supabaseKey) {
+const isServer = typeof window === 'undefined'
+
+if (isServer && (!supabaseUrl || !supabaseKey)) {
   throw new Error(
     'Missing Supabase credentials. Ensure NEXT_PUBLIC_SUPABASE_URL and ' +
     'SUPABASE_SERVICE_ROLE_KEY are set in your environment.'
   )
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-  db: {
-    schema: supabaseSchema
-  },
-  ...(ws ? { realtime: { transport: ws } } : {})
-})
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseKey || 'placeholder-key',
+  {
+    db: {
+      schema: supabaseSchema
+    },
+    ...(ws ? { realtime: { transport: ws } } : {})
+  }
+)
 
 export type AccountWithMetrics = {
   id: string
