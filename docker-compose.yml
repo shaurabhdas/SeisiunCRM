@@ -1,24 +1,6 @@
 version: '3.8'
 
 services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: apexcrm-backend
-    restart: always
-    ports:
-      - "5000:5000"
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      PORT: ${PORT}
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
-    command: sh -c "npx prisma db push && npm run prisma:seed && npm run dev"
-    networks:
-      - crm-network
-
   frontend:
     build:
       context: ./frontend
@@ -27,14 +9,10 @@ services:
     restart: always
     ports:
       - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     volumes:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
-    depends_on:
-      - backend
     networks:
       - crm-network
 

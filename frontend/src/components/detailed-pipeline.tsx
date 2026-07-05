@@ -102,7 +102,6 @@ export function DetailedPipeline({
   const handleSaveChanges = () => {
     if (!selectedDeal) return
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
     const body = {
       value: editValue,
       stage: editStage,
@@ -112,7 +111,7 @@ export function DetailedPipeline({
       customRiskText: editRiskText
     }
 
-    fetch(`${apiUrl}/deals/${selectedDeal.id}/override`, {
+    fetch(`/api/deals/${selectedDeal.id}/override`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'

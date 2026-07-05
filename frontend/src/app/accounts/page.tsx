@@ -102,8 +102,6 @@ function AccountsPageContent() {
     leadId: ""
   })
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
-
   React.useEffect(() => {
     loadAccountsData()
   }, [])
@@ -175,7 +173,7 @@ function AccountsPageContent() {
     if (!newAccountForm.name.trim()) return
 
     try {
-      const res = await fetch(`${apiUrl}/accounts`, {
+      const res = await fetch('/api/accounts', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -215,7 +213,7 @@ function AccountsPageContent() {
     if (!selectedAccountId) return
 
     try {
-      const res = await fetch(`${apiUrl}/accounts/${selectedAccountId}`, {
+      const res = await fetch(`/api/accounts/${selectedAccountId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -240,7 +238,7 @@ function AccountsPageContent() {
     if (!selectedAccountId) return
 
     try {
-      const res = await fetch(`${apiUrl}/accounts/${selectedAccountId}`, {
+      const res = await fetch(`/api/accounts/${selectedAccountId}`, {
         method: "DELETE"
       })
 
@@ -260,7 +258,7 @@ function AccountsPageContent() {
     if (!selectedAccount || !newLeadForm.opportunityName.trim()) return
 
     try {
-      const res = await fetch(`${apiUrl}/leads`, {
+      const res = await fetch('/api/leads', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

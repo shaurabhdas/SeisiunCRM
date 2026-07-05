@@ -185,8 +185,6 @@ function LeadsPageContent() {
   const [showOutcomeDropdown, setShowOutcomeDropdown] = React.useState(false)
   const [postDemoOutcome, setPostDemoOutcome] = React.useState("proposal_requested")
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
-
   React.useEffect(() => {
     fetchLeads()
     fetchRegions()
@@ -225,7 +223,7 @@ function LeadsPageContent() {
 
   const fetchLeads = async () => {
     try {
-      const res = await fetch(`${apiUrl}/leads`)
+      const res = await fetch('/api/leads')
       if (!res.ok) throw new Error("Failed to fetch leads")
       const data = await res.json()
       setLeads(data)
@@ -238,7 +236,7 @@ function LeadsPageContent() {
 
   const fetchRegions = async () => {
     try {
-      const res = await fetch(`${apiUrl}/leads/regions`)
+      const res = await fetch('/api/leads/regions')
       if (res.ok) {
         const data = await res.json()
         setRegions(data)
@@ -250,7 +248,7 @@ function LeadsPageContent() {
 
   const fetchAccounts = async () => {
     try {
-      const res = await fetch(`${apiUrl}/leads/accounts`)
+      const res = await fetch('/api/leads/accounts')
       if (res.ok) {
         const data = await res.json()
         setAllAccounts(data)
@@ -282,7 +280,7 @@ function LeadsPageContent() {
     }
 
     try {
-      const res = await fetch(`${apiUrl}/leads`, {
+      const res = await fetch('/api/leads', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -347,7 +345,7 @@ function LeadsPageContent() {
     if (!selectedLeadId) return
 
     try {
-      const res = await fetch(`${apiUrl}/leads/${selectedLeadId}`, {
+      const res = await fetch(`/api/leads/${selectedLeadId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -379,7 +377,7 @@ function LeadsPageContent() {
     setDeleteError(null)
 
     try {
-      const res = await fetch(`${apiUrl}/leads/${selectedLeadId}`, {
+      const res = await fetch(`/api/leads/${selectedLeadId}`, {
         method: "DELETE"
       })
 
@@ -404,7 +402,7 @@ function LeadsPageContent() {
     if (!selectedLeadId || !newContactForm.firstName || !newContactForm.lastName) return
 
     try {
-      const res = await fetch(`${apiUrl}/leads/${selectedLeadId}/contacts`, {
+      const res = await fetch(`/api/leads/${selectedLeadId}/contacts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newContactForm)
@@ -431,7 +429,7 @@ function LeadsPageContent() {
     if (!selectedLeadId || !selectedActivityType) return
 
     try {
-      const res = await fetch(`${apiUrl}/leads/${selectedLeadId}/activities`, {
+      const res = await fetch(`/api/leads/${selectedLeadId}/activities`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -465,7 +463,7 @@ function LeadsPageContent() {
         body[field] = editValue
       }
 
-      const res = await fetch(`${apiUrl}/leads/${selectedLeadId}`, {
+      const res = await fetch(`/api/leads/${selectedLeadId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
@@ -485,7 +483,7 @@ function LeadsPageContent() {
     if (!selectedLeadId) return
 
     try {
-      const res = await fetch(`${apiUrl}/leads/${selectedLeadId}/disqualify`, {
+      const res = await fetch(`/api/leads/${selectedLeadId}/disqualify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason: disqualifyReason })
@@ -504,7 +502,7 @@ function LeadsPageContent() {
   const handleStageTransition = async (toStage: string, outcome?: string) => {
     if (!selectedLeadId) return
     try {
-      const res = await fetch(`${apiUrl}/leads/${selectedLeadId}/stage`, {
+      const res = await fetch(`/api/leads/${selectedLeadId}/stage`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ toStage, postDemoOutcome: outcome })
