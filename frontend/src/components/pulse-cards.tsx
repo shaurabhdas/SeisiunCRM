@@ -8,16 +8,24 @@ interface KPIState {
   commit: string
   likelySlip: string
   activeOpportunitiesCount: number
-  executiveActionCount: number
+  slippingDealsCount: number
+  confidence: number
+  commitIndicator: string
+  newlyQualifiedValue: number
 }
+
+const formatK = (val: number) => `$${Math.round(val / 1000)}K`
 
 export function PulseCards({ refreshKey }: { refreshKey: number }) {
   const [kpis, setKpis] = React.useState<KPIState>({
-    bestCase: "$621K",
-    commit: "$392K",
-    likelySlip: "$148K",
-    activeOpportunitiesCount: 14,
-    executiveActionCount: 5
+    bestCase: "—",
+    commit: "—",
+    likelySlip: "—",
+    activeOpportunitiesCount: 0,
+    slippingDealsCount: 0,
+    confidence: 0,
+    commitIndicator: "",
+    newlyQualifiedValue: 0
   })
 
   React.useEffect(() => {
@@ -27,9 +35,16 @@ export function PulseCards({ refreshKey }: { refreshKey: number }) {
         return res.json()
       })
       .then(data => {
-        if (data.bestCase && data.commit && data.likelySlip) {
-          setKpis(data)
-        }
+        setKpis({
+          bestCase: data.bestCase || "—",
+          commit: data.commit || "—",
+          likelySlip: data.likelySlip || "—",
+          activeOpportunitiesCount: data.activeOpportunitiesCount || 0,
+          slippingDealsCount: data.slippingDealsCount || 0,
+          confidence: data.confidence || 0,
+          commitIndicator: data.commitIndicator || "",
+          newlyQualifiedValue: data.newlyQualifiedValue || 0
+        })
       })
       .catch(err => console.error("Error fetching forecast KPIs:", err))
   }, [refreshKey])
@@ -40,10 +55,12 @@ export function PulseCards({ refreshKey }: { refreshKey: number }) {
       <Card className="rounded-lg border bg-card p-4 shadow-xs">
         <p className="text-sm font-medium text-muted-foreground">Commit forecast</p>
         <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">{kpis.commit}</p>
-        <p className="mt-2 text-sm text-muted-foreground">74% confidence</p>
-        <div className="mt-4 inline-block rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
-          +12% from last week
-        </div>
+        <p className="mt-2 text-sm text-muted-foreground">{kpis.confidence}% confidence</p>
+        {kpis.commitIndicator && (
+          <div className="mt-4 inline-block rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
+            {kpis.commitIndicator}
+          </div>
+        )}
       </Card>
 
       {/* Best Case */}
@@ -51,19 +68,26 @@ export function PulseCards({ refreshKey }: { refreshKey: number }) {
         <p className="text-sm font-medium text-muted-foreground">Best case</p>
         <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">{kpis.bestCase}</p>
         <p className="mt-2 text-sm text-muted-foreground">{kpis.activeOpportunitiesCount} active opportunities</p>
-        <div className="mt-4 inline-block rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
-          +$82K newly qualified
-        </div>
+        {kpis.newlyQualifiedValue > 0 && (
+          <div className="mt-4 inline-block rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
+            +{formatK(kpis.newlyQualifiedValue)} newly qualified
+          </div>
+        )}
       </Card>
 
       {/* Likely Slip */}
       <Card className="rounded-lg border bg-card p-4 shadow-xs">
         <p className="text-sm font-medium text-muted-foreground">Likely slip</p>
         <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">{kpis.likelySlip}</p>
-        <p className="mt-2 text-sm text-muted-foreground">{kpis.executiveActionCount} deals need executive action</p>
-        <div className="mt-4 inline-block rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
-          2 moved from green to amber
-        </div>
+        {kpis.slippingDealsCount > 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            {kpis.slippingDealsCount} deal{kpis.slippingDealsCount !== 1 ? 's' : ''} closing soon with no recent contact
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-emerald-600/70 dark:text-emerald-400/70">
+            No slipping deals this week
+          </p>
+        )}
       </Card>
     </div>
   )

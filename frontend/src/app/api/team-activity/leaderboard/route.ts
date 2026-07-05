@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     const repMap = new Map<string, { emails: number; calls: number; meetings: number; presentations: number; demos: number }>()
 
     acts.forEach(act => {
-      const repId = act.logged_by || 'Unassigned'
+      const repId = act.logged_by || 'AllReps'
       if (!repMap.has(repId)) {
         repMap.set(repId, { emails: 0, calls: 0, meetings: 0, presentations: 0, demos: 0 })
       }
@@ -78,8 +78,8 @@ export async function GET(request: NextRequest) {
     })
 
     const leaderboard = Array.from(repMap.entries()).map(([repId, counts]) => {
-      let name = 'Unassigned'
-      if (repId !== 'Unassigned') {
+      let name = 'All Reps'
+      if (repId !== 'AllReps') {
         name = userMap.get(repId) || `Rep ${repId.slice(0, 4)}`
       }
 

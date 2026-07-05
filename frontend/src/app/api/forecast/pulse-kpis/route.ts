@@ -106,6 +106,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Newly qualified value: sum of deal_value for leads that entered connected+ in last 7 days
+    const qualifiedStages = ['connected', 'presentation', 'demo', 'evaluating']
+    const recentQualifiedHistory = history.filter(h => {
+      if (!h.changed_at) return false
+      const changedDate = new Date(h.changed_at)
+      return changedDate >= sevenDaysAgo && qualifiedStages.includes(h.to_stage?.toLowerCase() || '')
+    })
+    const uniqueQualifiedLeadIds = Array.from(new Set(recentQualifiedHistory.map(h => h.lead_id)))
+    const newlyQualifiedValue = leads
+      .filter(l => uniqueQualifiedLeadIds.includes(l.id))
+      .reduce((sum, l) => sum + Number(l.deal_value || 0), 0)
+
     return NextResponse.json({
       bestCase: formatK(bestCaseValue),
       commit: formatK(commitForecastValue),
@@ -114,10 +126,10 @@ export async function GET(request: NextRequest) {
       commitRaw: commitForecastValue,
       likelySlipRaw: likelySlipValue,
       activeOpportunitiesCount: bestCaseLeads.length,
-      executiveActionCount: likelySlipLeads.length,
+      slippingDealsCount: likelySlipLeads.length,
       confidence,
       commitIndicator,
-      indicator: commitIndicator
+      newlyQualifiedValue
     })
   } catch (error) {
     return NextResponse.json(

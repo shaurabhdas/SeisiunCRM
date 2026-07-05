@@ -7,14 +7,27 @@ import { PulseConfidence } from "@/components/pulse-confidence"
 import { DetailedPipeline } from "@/components/detailed-pipeline"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { TrendingUp } from "lucide-react"
+import { TrendingUp, TrendingDown } from "lucide-react"
 
 export default function Page() {
   const [refreshKey, setRefreshKey] = React.useState(0)
+  const [commitIndicator, setCommitIndicator] = React.useState("")
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1)
   }
+
+  React.useEffect(() => {
+    fetch('/api/forecast/pulse-kpis')
+      .then(res => res.json())
+      .then(data => {
+        setCommitIndicator(data.commitIndicator || "")
+      })
+      .catch(() => {})
+  }, [refreshKey])
+
+  const isUp = commitIndicator.startsWith("Commit up")
+  const isDown = commitIndicator.startsWith("Commit down")
 
   return (
     <SidebarProvider
@@ -37,10 +50,20 @@ export default function Page() {
                 Know what is commit, what is upside, and what is about to slip.
               </h1>
             </div>
-            <div className="flex shrink-0 items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
-              <TrendingUp className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Commit up $38K</span>
-            </div>
+            {commitIndicator && (
+              <div className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                isDown
+                  ? "bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-400"
+                  : "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400"
+              }`}>
+                {isDown ? (
+                  <TrendingDown className="size-3.5 text-red-600 dark:text-red-400" />
+                ) : (
+                  <TrendingUp className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                )}
+                <span>{commitIndicator}</span>
+              </div>
+            )}
           </div>
 
           {/* Grid Layout containing cards, table, and confidence progress */}

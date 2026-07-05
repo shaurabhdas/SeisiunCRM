@@ -51,10 +51,10 @@ export async function GET(request: NextRequest) {
     const proposalsCount = acts.filter(a => a.activity_type?.toLowerCase() === 'presentation').length
 
     return NextResponse.json({
-      emails: { label: "Total Emails Sent", value: emailsCount.toLocaleString(), trend: "+12.4%", outcome: "14.2% reply rate" },
-      calls: { label: "Total Calls Made", value: callsCount.toLocaleString(), trend: "+8.2%", outcome: "8.5% connect rate" },
-      meetings: { label: "Meetings Booked", value: meetingsCount.toLocaleString(), trend: "+18.5%", outcome: "94% show rate" },
-      proposals: { label: "Proposals Sent", value: proposalsCount.toLocaleString(), trend: "+5.3%", outcome: "60% win rate" },
+      emails: { label: "Total Emails Sent", value: emailsCount.toLocaleString() },
+      calls: { label: "Total Calls Made", value: callsCount.toLocaleString() },
+      meetings: { label: "Meetings Booked", value: meetingsCount.toLocaleString() },
+      proposals: { label: "Proposals Sent", value: proposalsCount.toLocaleString() },
     })
   } catch (error) {
     return NextResponse.json(

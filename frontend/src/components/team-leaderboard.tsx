@@ -13,26 +13,7 @@ interface RepRow {
   score: number // calculated dynamically
 }
 
-const rawThisWeek: Omit<RepRow, "score">[] = [
-  { name: "Avery Jones", initials: "AJ", emails: 1240, calls: 410, meetings: 18 },
-  { name: "Elehia Milen", initials: "EM", emails: 150, calls: 20, meetings: 10 },
-  { name: "Marhan Harner", initials: "MH", emails: 56, calls: 16, meetings: 3 },
-  { name: "Avery Person", initials: "AP", emails: 18, calls: 7, meetings: 0 },
-]
 
-const rawLastWeek: Omit<RepRow, "score">[] = [
-  { name: "Avery Jones", initials: "AJ", emails: 1150, calls: 385, meetings: 15 },
-  { name: "Elehia Milen", initials: "EM", emails: 140, calls: 18, meetings: 8 },
-  { name: "Marhan Harner", initials: "MH", emails: 48, calls: 14, meetings: 2 },
-  { name: "Avery Person", initials: "AP", emails: 22, calls: 9, meetings: 1 },
-]
-
-const rawMonthToDate: Omit<RepRow, "score">[] = [
-  { name: "Avery Jones", initials: "AJ", emails: 4820, calls: 1580, meetings: 72 },
-  { name: "Elehia Milen", initials: "EM", emails: 580, calls: 82, meetings: 38 },
-  { name: "Marhan Harner", initials: "MH", emails: 244, calls: 68, meetings: 12 },
-  { name: "Avery Person", initials: "AP", emails: 95, calls: 32, meetings: 3 },
-]
 
 // Weighted formula: 1 Meeting = 10 pts, 1 Call = 3 pts, 1 Email = 1 pt
 function calculateScore(row: Omit<RepRow, "score">): RepRow {
@@ -191,6 +172,9 @@ export function TeamLeaderboard({ timeframe }: { timeframe: string }) {
           </tbody>
         </table>
       </div>
+      <p className="mt-3 text-[11px] text-muted-foreground/60 italic">
+        Rep-level breakdown available after authentication is enabled.
+      </p>
     </div>
   )
 }
