@@ -6,6 +6,19 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+function camelCaseActivity(a: any) {
+  if (!a) return null
+  return {
+    id: a.id,
+    leadId: a.lead_id,
+    activityType: a.activity_type,
+    activityDate: a.activity_date,
+    note: a.note,
+    loggedBy: a.logged_by,
+    createdAt: a.created_at
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -37,7 +50,7 @@ export async function POST(
       .single()
 
     if (activityErr) throw activityErr
-    return NextResponse.json(activity, { status: 201 })
+    return NextResponse.json(camelCaseActivity(activity), { status: 201 })
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 })
   }
