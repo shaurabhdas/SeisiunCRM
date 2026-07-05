@@ -110,15 +110,17 @@ function AccountsPageContent() {
   const loadAccountsData = async () => {
     try {
       setLoading(true)
-      const data = await fetchAccountsWithMetrics()
+      const res = await fetch('/api/accounts')
+      if (!res.ok) throw new Error("Failed to fetch accounts")
+      const data = await res.json()
       setAccounts(data)
 
       // Extract distinct regions
-      const distinctRegions = Array.from(new Set(data.map(a => a.sales_region).filter(Boolean))) as string[]
+      const distinctRegions = Array.from(new Set(data.map((a: any) => a.sales_region).filter(Boolean))) as string[]
       setRegions(distinctRegions)
 
       // Extract distinct industries
-      const distinctIndustries = Array.from(new Set(data.map(a => a.industry).filter(Boolean))) as string[]
+      const distinctIndustries = Array.from(new Set(data.map((a: any) => a.industry).filter(Boolean))) as string[]
       setIndustries(distinctIndustries)
     } catch (err) {
       console.error("Error loading accounts data:", err)
@@ -173,19 +175,20 @@ function AccountsPageContent() {
     if (!newAccountForm.name.trim()) return
 
     try {
-      const { data, error } = await supabase
-        .from('accounts')
-        .insert({
+      const res = await fetch('/api/accounts', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           name: newAccountForm.name,
           industry: newAccountForm.industry || null,
           company_size: newAccountForm.companySize || null,
           sales_region: newAccountForm.salesRegion,
           notes: newAccountForm.notes || null
         })
-        .select()
-        .single()
+      })
 
-      if (error) throw error
+      if (!res.ok) throw new Error("Failed to create account")
+      const createdAccount = await res.json()
 
       await loadAccountsData()
       setIsAddAccountOpen(false)
@@ -198,7 +201,7 @@ function AccountsPageContent() {
       })
 
       // Immediately open Zone C for new account
-      setSelectedAccountId(data.id)
+      setSelectedAccountId(createdAccount.id)
     } catch (err) {
       console.error("Error creating account:", err)
     }
@@ -210,18 +213,19 @@ function AccountsPageContent() {
     if (!selectedAccountId) return
 
     try {
-      const { error } = await supabase
-        .from('accounts')
-        .update({
+      const res = await fetch(`/api/accounts/${selectedAccountId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           name: editForm.name,
           industry: editForm.industry || null,
           company_size: editForm.companySize || null,
           sales_region: editForm.salesRegion,
           notes: editForm.notes || null
         })
-        .eq('id', selectedAccountId)
+      })
 
-      if (error) throw error
+      if (!res.ok) throw new Error("Failed to update account")
 
       await loadAccountsData()
       setIsEditingAccount(false)
@@ -230,34 +234,15 @@ function AccountsPageContent() {
     }
   }
 
-  // Delete Account (Cascade delete) handler
   const handleDeleteAccount = async () => {
     if (!selectedAccountId) return
 
     try {
-      // 1. Fetch leads linked to this account
-      const { data: leads } = await supabase
-        .from('leads')
-        .select('id')
-        .eq('account_id', selectedAccountId)
+      const res = await fetch(`/api/accounts/${selectedAccountId}`, {
+        method: "DELETE"
+      })
 
-      const leadIds = (leads || []).map(l => l.id)
-
-      if (leadIds.length > 0) {
-        // Delete activities for these leads
-        await supabase.from('lead_activities').delete().in('lead_id', leadIds)
-        // Delete stage histories for these leads
-        await supabase.from('lead_stage_history').delete().in('lead_id', leadIds)
-      }
-
-      // Delete contacts
-      await supabase.from('contacts').delete().eq('account_id', selectedAccountId)
-
-      // Delete leads
-      await supabase.from('leads').delete().eq('account_id', selectedAccountId)
-
-      // Delete account itself
-      await supabase.from('accounts').delete().eq('id', selectedAccountId)
+      if (!res.ok) throw new Error("Failed to delete account")
 
       setSelectedAccountId(null)
       setIsDeleteAccountOpen(false)
