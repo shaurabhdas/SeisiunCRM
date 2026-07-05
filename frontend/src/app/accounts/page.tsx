@@ -147,6 +147,11 @@ function AccountsPageContent() {
     }
   }, [selectedAccountId])
 
+  // Reset disqualified toggle when selected account changes
+  React.useEffect(() => {
+    setShowDisqualifiedLeads(false)
+  }, [selectedAccountId])
+
   const selectedAccount = accounts.find(a => a.id === selectedAccountId)
 
   const visibleLeads = selectedAccount
@@ -910,14 +915,21 @@ function AccountsPageContent() {
                               const followUpDisplay = formatFollowUpDisplay(daysSince)
                               const followUpColor = getFollowUpColorToken(daysSince)
 
+                              const isDisqualified = lead.stage === 'disqualified'
+
                               return (
-                                <div key={lead.id} className="flex items-center justify-between border rounded-lg p-2.5 bg-card hover:bg-muted/10 transition-colors">
+                                <div 
+                                  key={lead.id} 
+                                  className={`flex items-center justify-between border rounded-lg p-2.5 bg-card hover:bg-muted/10 transition-colors
+                                    ${isDisqualified ? 'opacity-50' : ''}
+                                  `}
+                                >
                                   <div className="min-w-0 pr-2">
-                                    <p className="font-semibold text-foreground truncate">{lead.opportunity_name}</p>
+                                    <p className={`font-semibold text-foreground truncate ${isDisqualified ? 'italic' : ''}`}>{lead.opportunity_name}</p>
                                     <div className="flex flex-wrap items-center gap-1.5 mt-1">
                                       {/* Stage label */}
                                       <span className="rounded bg-neutral-100 dark:bg-neutral-800 text-3xs font-semibold uppercase px-1.5 py-0.5 text-muted-foreground">
-                                        {lead.stage}
+                                        {isDisqualified ? 'DISQUALIFIED' : lead.stage}
                                       </span>
                                       
                                       {/* Followup indicator */}
