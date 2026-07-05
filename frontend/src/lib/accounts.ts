@@ -30,16 +30,57 @@ if (isServer && (!supabaseUrl || !supabaseKey)) {
   )
 }
 
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseKey || 'placeholder-key',
-  {
-    db: {
-      schema: supabaseSchema
-    },
-    ...(ws ? { realtime: { transport: ws } } : {})
+let schemaStorage: any = null
+if (typeof window === 'undefined') {
+  const g = global as any
+  if (!g.__schemaStorage) {
+    const { AsyncLocalStorage } = require('async_hooks')
+    g.__schemaStorage = new AsyncLocalStorage()
   }
-)
+  schemaStorage = g.__schemaStorage
+}
+export { schemaStorage }
+
+const clientsMap = new Map<string, any>()
+
+let getDynamicSchema = () => supabaseSchema
+
+if (typeof window === 'undefined') {
+  getDynamicSchema = () => {
+    const g = global as any
+    const storage = g.__schemaStorage
+    console.log("SCHEMA STORAGE ATTEMPT:", storage ? "EXISTS" : "MISSING", "STORE:", storage?.getStore())
+    return storage?.getStore() || supabaseSchema
+  }
+}
+
+function getSupabaseClient() {
+  const schema = getDynamicSchema()
+  if (!clientsMap.has(schema)) {
+    clientsMap.set(schema, createClient(
+      supabaseUrl || 'https://placeholder.supabase.co',
+      supabaseKey || 'placeholder-key',
+      {
+        db: {
+          schema
+        },
+        ...(ws ? { realtime: { transport: ws } } : {})
+      }
+    ))
+  }
+  return clientsMap.get(schema)
+}
+
+export const supabase = new Proxy({}, {
+  get(target, prop) {
+    const client = getSupabaseClient()
+    const value = client[prop]
+    if (typeof value === 'function') {
+      return value.bind(client)
+    }
+    return value
+  }
+}) as ReturnType<typeof createClient>
 
 export type AccountWithMetrics = {
   id: string

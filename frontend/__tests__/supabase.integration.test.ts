@@ -738,4 +738,127 @@ describe('Deals schema verification', () => {
   })
 })
 
+describe('Deals stage gate validation', () => {
+
+  let gateTestDealId: string
+
+  beforeAll(async () => {
+    const today = new Date().toISOString().split('T')[0]
+    const { data: deal } = await supabase
+      .from('deals')
+      .insert({
+        account_id: testAccountId,
+        opportunity_name: 'Gate Test Deal',
+        deal_type: 'poc',
+        reported_value: 60000,
+        value_confidence: 'estimated',
+        stage: 'proposal_submitted',
+        proposal_date: today,
+        sales_region: 'US East',
+      })
+      .select()
+      .single()
+    gateTestDealId = deal.id
+  })
+
+  afterAll(async () => {
+    if (gateTestDealId) {
+      await supabase.from('deal_stage_history').delete().eq('deal_id', gateTestDealId)
+      await supabase.from('deal_activities').delete().eq('deal_id', gateTestDealId)
+      await supabase.from('deals').delete().eq('id', gateTestDealId)
+    }
+  })
+
+  it('blocks advance to negotiation when no activity exists after proposal date', async () => {
+    const response = await fetch(
+      `http://localhost:3000/api/deals/${gateTestDealId}/stage`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-supabase-schema': 'test'
+        },
+        body: JSON.stringify({ toStage: 'negotiation' }),
+      }
+    )
+    expect(response.status).toBe(400)
+    const result = await response.json()
+    expect(result.error).toBeTruthy()
+  })
+
+  it('allows advance to negotiation when activity exists on or after proposal date', async () => {
+    const today = new Date().toISOString().split('T')[0]
+    await supabase.from('deal_activities').insert({
+      deal_id: gateTestDealId,
+      activity_type: 'call',
+      activity_date: today,
+      note: 'Gate test call activity.',
+    })
+
+    const response = await fetch(
+      `http://localhost:3000/api/deals/${gateTestDealId}/stage`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-supabase-schema': 'test'
+        },
+        body: JSON.stringify({ toStage: 'negotiation' }),
+      }
+    )
+    expect(response.status).toBe(200)
+    const result = await response.json()
+    expect(result.stage).toBe('negotiation')
+  })
+
+  it('blocks closed_lost without a lost reason', async () => {
+    const response = await fetch(
+      `http://localhost:3000/api/deals/${gateTestDealId}/stage`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-supabase-schema': 'test'
+        },
+        body: JSON.stringify({ toStage: 'closed_lost' }),
+      }
+    )
+    expect(response.status).toBe(400)
+    const result = await response.json()
+    expect(result.error).toBeTruthy()
+  })
+
+  it('blocks closed_lost with an invalid lost reason', async () => {
+    const response = await fetch(
+      `http://localhost:3000/api/deals/${gateTestDealId}/stage`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-supabase-schema': 'test'
+        },
+        body: JSON.stringify({ toStage: 'closed_lost', lost_reason: 'invalid_reason' }),
+      }
+    )
+    expect(response.status).toBe(400)
+  })
+
+  it('blocks closed_won without sow_reference and close_date', async () => {
+    const response = await fetch(
+      `http://localhost:3000/api/deals/${gateTestDealId}/stage`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-supabase-schema': 'test'
+        },
+        body: JSON.stringify({ toStage: 'closed_won' }),
+      }
+    )
+    expect(response.status).toBe(400)
+    const result = await response.json()
+    expect(result.error).toBeTruthy()
+  })
+})
+
 
