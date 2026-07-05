@@ -21,8 +21,7 @@ export function PulseCards({ refreshKey }: { refreshKey: number }) {
   })
 
   React.useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
-    fetch(`${apiUrl}/forecast/pulse-kpis`)
+    fetch('/api/forecast/pulse-kpis')
       .then(res => {
         if (!res.ok) throw new Error("Network response not ok")
         return res.json()

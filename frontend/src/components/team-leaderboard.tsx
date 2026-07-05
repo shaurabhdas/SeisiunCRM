@@ -48,8 +48,7 @@ export function TeamLeaderboard({ timeframe }: { timeframe: string }) {
   const [sortAsc, setSortAsc] = React.useState(false)
 
   React.useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
-    fetch(`${apiUrl}/team-activity/leaderboard?timeframe=${timeframe}`)
+    fetch(`/api/team-activity/leaderboard?timeframe=${timeframe}`)
       .then(res => {
         if (!res.ok) throw new Error("Failed to fetch leaderboard")
         return res.json()

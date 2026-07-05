@@ -19,8 +19,7 @@ export function PulseConfidence({ refreshKey }: { refreshKey: number }) {
   const [stages, setStages] = React.useState<StageConfidenceItem[]>(defaultStages)
 
   React.useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
-    fetch(`${apiUrl}/forecast/pulse-stages`)
+    fetch('/api/forecast/pulse-stages')
       .then(res => {
         if (!res.ok) throw new Error("Network response not ok")
         return res.json()

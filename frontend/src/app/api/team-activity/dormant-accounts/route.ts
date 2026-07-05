@@ -29,8 +29,10 @@ export async function GET(request: NextRequest) {
         name: acc.name,
         value: formatK(acc.totalDealValue),
         valueNumeric: acc.totalDealValue,
+        totalDealValue: acc.totalDealValue,
         lastActivity: lastActivityDateStr,
         days: acc.lastActivityDays !== null ? acc.lastActivityDays : 99,
+        lastActivityDays: acc.lastActivityDays !== null ? acc.lastActivityDays : 99,
         healthScore: health.score,
         score: health.score,
         band: health.band

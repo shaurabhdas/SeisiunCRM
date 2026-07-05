@@ -3,22 +3,23 @@
 import * as React from "react"
 import { Settings, Mail, Phone, Check, RefreshCw, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
+import { formatDealValue } from "@/lib/followup"
 
 interface AccountRow {
   id: string
   name: string
-  value: string
-  valueNumeric: number
+  totalDealValue: number
+  lastActivityDays: number
+  healthScore: number
   lastActivity: string
-  days: number
 }
 
 const initialAccounts: AccountRow[] = [
-  { id: "1", name: "Northstar Labs", value: "$996K", valueNumeric: 996000, lastActivity: "2026-06-06", days: 10 },
-  { id: "2", name: "Mercury Retail (Midwest)", value: "$118K", valueNumeric: 118000, lastActivity: "2026-06-12", days: 4 },
-  { id: "3", name: "Mercury Retail (South)", value: "$118K", valueNumeric: 118000, lastActivity: "2026-06-13", days: 3 },
-  { id: "4", name: "Mercury Retail (East)", value: "$108K", valueNumeric: 108000, lastActivity: "2026-06-13", days: 3 },
-  { id: "5", name: "Mercury Retail (West)", value: "$118K", valueNumeric: 118000, lastActivity: "2026-06-15", days: 1 },
+  { id: "1", name: "Northstar Labs", totalDealValue: 996000, lastActivity: "2026-06-06", lastActivityDays: 10, healthScore: 20 },
+  { id: "2", name: "Mercury Retail (Midwest)", totalDealValue: 118000, lastActivity: "2026-06-12", lastActivityDays: 4, healthScore: 40 },
+  { id: "3", name: "Mercury Retail (South)", totalDealValue: 118000, lastActivity: "2026-06-13", lastActivityDays: 3, healthScore: 45 },
+  { id: "4", name: "Mercury Retail (East)", totalDealValue: 108000, lastActivity: "2026-06-13", lastActivityDays: 3, healthScore: 48 },
+  { id: "5", name: "Mercury Retail (West)", totalDealValue: 118000, lastActivity: "2026-06-15", lastActivityDays: 1, healthScore: 70 },
 ]
 
 export function DormantAccounts() {
@@ -29,8 +30,7 @@ export function DormantAccounts() {
 
   const fetchAccounts = () => {
     setLoading(true)
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
-    fetch(`${apiUrl}/team-activity/dormant-accounts`)
+    fetch('/api/team-activity/dormant-accounts')
       .then(res => {
         if (!res.ok) throw new Error("Failed to fetch dormant accounts")
         return res.json()
@@ -51,14 +51,14 @@ export function DormantAccounts() {
 
   // Filter accounts based on SLA threshold slider
   const filteredAccounts = React.useMemo(() => {
-    return accounts.filter((acc) => acc.days >= slaDays)
+    return accounts.filter((acc) => acc.lastActivityDays >= slaDays)
   }, [accounts, slaDays])
 
   // Recalculate summary totals dynamically
   const exposureTotals = React.useMemo(() => {
-    const totalVal = filteredAccounts.reduce((sum, acc) => sum + acc.valueNumeric, 0)
+    const totalVal = filteredAccounts.reduce((sum, acc) => sum + acc.totalDealValue, 0)
     const avgDays = filteredAccounts.length > 0 
-      ? Math.round((filteredAccounts.reduce((sum, acc) => sum + acc.days, 0) / filteredAccounts.length) * 10) / 10
+      ? Math.round((filteredAccounts.reduce((sum, acc) => sum + acc.lastActivityDays, 0) / filteredAccounts.length) * 10) / 10
       : 0
     return {
       valueFormatted: `$${(totalVal / 1000).toFixed(0)}K`,
@@ -200,17 +200,17 @@ export function DormantAccounts() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-foreground truncate text-sm">{account.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Value: <span className="font-semibold text-foreground/80">{account.value}</span></p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Value: <span className="font-semibold text-foreground/80">{formatDealValue(account.totalDealValue)}</span></p>
                   </div>
                   
-                  <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide border ${getBadgeStyle(account.days)}`}>
-                    {getBadgeText(account.days)}
+                  <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide border ${getBadgeStyle(account.lastActivityDays)}`}>
+                    {getBadgeText(account.lastActivityDays)}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between border-t pt-2 mt-1">
                   <span className="text-[10px] text-muted-foreground">
-                    Inactive: <span className="font-semibold text-foreground/75 tabular-nums">{account.days} days</span>
+                    Inactive: <span className="font-semibold text-foreground/75 tabular-nums">{account.lastActivityDays} days</span>
                   </span>
 
                   {/* Hover Quick Actions */}

@@ -61,8 +61,7 @@ export function TeamDailyChart({ timeframe }: { timeframe: string }) {
   const [showCalls, setShowCalls] = React.useState(true)
 
   React.useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
-    fetch(`${apiUrl}/team-activity/daily-chart?timeframe=${timeframe}`)
+    fetch(`/api/team-activity/daily-chart?timeframe=${timeframe}`)
       .then(res => {
         if (!res.ok) throw new Error("Failed to fetch chart data")
         return res.json()

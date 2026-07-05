@@ -73,8 +73,7 @@ export function DetailedPipeline({
 
   React.useEffect(() => {
     setLoading(true)
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
-    fetch(`${apiUrl}/forecast/pulse-pipeline`)
+    fetch('/api/forecast/pulse-pipeline')
       .then(res => {
         if (!res.ok) throw new Error("Network response not ok")
         return res.json()
