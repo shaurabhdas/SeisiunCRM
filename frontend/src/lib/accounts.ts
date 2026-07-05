@@ -96,7 +96,7 @@ export async function fetchAccountsWithMetrics(): Promise<AccountWithMetrics[]> 
         last_connect_date,
         deal_value,
         forecast_close_date,
-        activities (
+        lead_activities (
           id,
           activity_type,
           activity_date,
@@ -182,7 +182,7 @@ export async function fetchAccountsWithMetrics(): Promise<AccountWithMetrics[]> 
     // Recent activities chronologically merged
     const recentActivities: ActivitySummary[] = []
     rawLeads.forEach((l: any) => {
-      const activities = l.activities || []
+      const activities = l.lead_activities || []
       activities.forEach((act: any) => {
         recentActivities.push({
           id: act.id,
