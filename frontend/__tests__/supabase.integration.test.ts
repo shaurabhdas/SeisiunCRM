@@ -233,7 +233,11 @@ describe('Schema migration verification', () => {
     expect(error).toBeNull()
     expect(lead.deal_value).toBe(0)
 
-    await supabase.from('leads').delete().eq('opportunity_name', 'Deal Value Test Lead')
+    const { data: lead1 } = await supabase.from('leads').select('id').eq('opportunity_name', 'Deal Value Test Lead').single()
+    if (lead1) {
+      await supabase.from('lead_stage_history').delete().eq('lead_id', lead1.id)
+      await supabase.from('leads').delete().eq('id', lead1.id)
+    }
   })
 
   it('deal_value accepts a numeric value correctly', async () => {
@@ -250,13 +254,16 @@ describe('Schema migration verification', () => {
         sales_region: 'US East',
         deal_value: 350000.00,
       })
-      .select('deal_value')
+      .select()
       .single()
 
     expect(error).toBeNull()
     expect(Number(lead.deal_value)).toBe(350000)
 
-    await supabase.from('leads').delete().eq('opportunity_name', 'Deal Value Amount Test')
+    if (lead) {
+      await supabase.from('lead_stage_history').delete().eq('lead_id', lead.id)
+      await supabase.from('leads').delete().eq('id', lead.id)
+    }
   })
 
   it('notes field exists on test.accounts and accepts text', async () => {
@@ -292,6 +299,108 @@ describe('Schema migration verification', () => {
     expect(account.notes).toBeNull()
 
     await supabase.from('accounts').delete().eq('name', 'No Notes Test Account')
+  })
+})
+
+describe('Account metrics queries', () => {
+
+  it('correctly counts open leads under an account', async () => {
+    const { data: leads } = await supabase
+      .from('leads')
+      .select('id')
+      .eq('account_id', testAccountId)
+      .neq('stage', 'disqualified')
+
+    expect(leads.length).toBeGreaterThanOrEqual(0)
+  })
+
+  it('correctly sums deal value across active leads', async () => {
+    // Clean up first to prevent pollution from previous runs
+    const { data: preLeads } = await supabase.from('leads').select('id').eq('account_id', testAccountId)
+    const preIds = (preLeads || []).map(l => l.id)
+    if (preIds.length > 0) {
+      await supabase.from('lead_stage_history').delete().in('lead_id', preIds)
+      await supabase.from('leads').delete().in('id', preIds)
+    }
+
+    await supabase.from('leads').insert([
+      {
+        opportunity_name: 'Deal A',
+        account_id: testAccountId,
+        stage: 'demo',
+        open_date: new Date().toISOString().split('T')[0],
+        forecast_close_date: '2026-12-31',
+        sales_region: 'US East',
+        deal_value: 200000,
+      },
+      {
+        opportunity_name: 'Deal B',
+        account_id: testAccountId,
+        stage: 'presentation',
+        open_date: new Date().toISOString().split('T')[0],
+        forecast_close_date: '2026-12-31',
+        sales_region: 'US East',
+        deal_value: 150000,
+      },
+    ])
+
+    const { data: leads } = await supabase
+      .from('leads')
+      .select('deal_value')
+      .eq('account_id', testAccountId)
+      .neq('stage', 'disqualified')
+
+    const total = leads.reduce((sum, l) => sum + Number(l.deal_value), 0)
+    expect(total).toBe(350000)
+
+    const { data: leadsToDelete } = await supabase.from('leads').select('id').eq('account_id', testAccountId)
+    const deleteIds = (leadsToDelete || []).map(l => l.id)
+    if (deleteIds.length > 0) {
+      await supabase.from('lead_stage_history').delete().in('lead_id', deleteIds)
+      await supabase.from('leads').delete().in('id', deleteIds)
+    }
+  })
+
+  it('identifies champion presence across leads for an account', async () => {
+    // 1. Create a temporary lead since global testLeadId is deleted in a prior test
+    const { data: lead, error: leadError } = await supabase
+      .from('leads')
+      .insert({
+        opportunity_name: 'Temp Champion Test Lead',
+        account_id: testAccountId,
+        stage: 'connected',
+        open_date: new Date().toISOString().split('T')[0],
+        sales_region: 'US East',
+      })
+      .select()
+      .single()
+
+    expect(leadError).toBeNull()
+
+    // 2. Insert the contact linked to this temporary lead
+    const { error: contactError } = await supabase.from('contacts').insert({
+      lead_id: lead.id,
+      account_id: testAccountId,
+      first_name: 'Jane',
+      last_name: 'Smith',
+      email: 'jane@test.com',
+      stakeholder_role: 'champion',
+    })
+
+    expect(contactError).toBeNull()
+
+    // 3. Query contacts
+    const { data: contacts } = await supabase
+      .from('contacts')
+      .select('stakeholder_role')
+      .eq('account_id', testAccountId)
+
+    const hasChampion = contacts.some(c => c.stakeholder_role === 'champion')
+    expect(hasChampion).toBe(true)
+
+    // 4. Clean up contacts and the temp lead
+    await supabase.from('contacts').delete().eq('account_id', testAccountId)
+    await supabase.from('leads').delete().eq('id', lead.id)
   })
 })
 

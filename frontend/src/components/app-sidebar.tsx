@@ -97,12 +97,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     {
       title: "Accounts",
       icon: Building2,
-      collapsible: true,
-      subItems: [
-        { name: "Named Account", url: "#" },
-        { name: "Health review", url: "#" },
-        { name: "Expansion", url: "#" }
-      ],
+      collapsible: false,
+      url: "/accounts",
     },
     {
       title: "Deals",
