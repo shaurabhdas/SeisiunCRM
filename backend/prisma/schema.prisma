@@ -91,6 +91,7 @@ model Account {
   industry    String?
   companySize String?  @map("company_size")
   salesRegion String?  @map("sales_region")
+  notes       String?
   createdAt   DateTime @default(now()) @map("created_at")
 
   leads       Lead[]
@@ -113,6 +114,7 @@ model Lead {
   assignedRepId          String?  @map("assigned_rep_id") // UUID references auth.users(id)
   disqualificationReason String?  @map("disqualification_reason") // no_budget, no_authority, etc.
   postDemoOutcome        String?  @map("post_demo_outcome") // proposal_requested, pilot_agreed, etc.
+  dealValue              Decimal? @default(0) @db.Decimal(12, 2) @map("deal_value")
   createdAt              DateTime @default(now()) @map("created_at")
 
   contacts               LeadContact[]

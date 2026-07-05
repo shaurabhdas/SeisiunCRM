@@ -606,7 +606,7 @@ app.get('/api/leads/accounts', async (req, res) => {
 
 app.post('/api/leads', async (req, res) => {
   try {
-    const { opportunityName, accountName, accountId, salesRegion, forecastCloseDate, painPoints } = req.body;
+    const { opportunityName, accountName, accountId, salesRegion, forecastCloseDate, painPoints, dealValue } = req.body;
     
     let finalAccountId = accountId;
     if (!finalAccountId && accountName) {
@@ -632,6 +632,7 @@ app.post('/api/leads', async (req, res) => {
         openDate: new Date(),
         forecastCloseDate: forecastCloseDate ? new Date(forecastCloseDate) : null,
         painPoints,
+        dealValue: dealValue !== undefined && dealValue !== null ? Number(dealValue) : 0,
       },
       include: {
         account: true,
@@ -832,6 +833,7 @@ app.put('/api/leads/:id', async (req, res) => {
       salesRegion,
       industry,
       companySize,
+      dealValue,
     } = req.body;
 
     const lead = await prisma.lead.findUnique({ where: { id } });
@@ -844,6 +846,7 @@ app.put('/api/leads/:id', async (req, res) => {
         forecastCloseDate: forecastCloseDate !== undefined ? (forecastCloseDate ? new Date(forecastCloseDate) : null) : lead.forecastCloseDate,
         competitor: competitor !== undefined ? competitor : lead.competitor,
         painPoints: painPoints !== undefined ? painPoints : lead.painPoints,
+        dealValue: dealValue !== undefined ? (dealValue !== null ? Number(dealValue) : 0) : undefined,
       }
     });
 

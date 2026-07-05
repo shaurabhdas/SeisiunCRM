@@ -3,6 +3,7 @@ import {
   calculateDaysSinceContact,
   getFollowUpColorToken,
   formatFollowUpDisplay,
+  formatDealValue,
 } from '@/lib/followup'
 
 describe('calculateDaysSinceContact', () => {
@@ -117,5 +118,28 @@ describe('formatFollowUpDisplay', () => {
 
   it('returns 12d for 12 days', () => {
     expect(formatFollowUpDisplay(12)).toBe('12d')
+  })
+})
+
+describe('formatDealValue', () => {
+
+  it('returns Not entered when value is 0', () => {
+    expect(formatDealValue(0)).toBe('Not entered')
+  })
+
+  it('returns Not entered when value is null', () => {
+    expect(formatDealValue(null)).toBe('Not entered')
+  })
+
+  it('formats 350000 as $350,000', () => {
+    expect(formatDealValue(350000)).toBe('$350,000')
+  })
+
+  it('formats 175000 as $175,000', () => {
+    expect(formatDealValue(175000)).toBe('$175,000')
+  })
+
+  it('formats 1000000 as $1,000,000', () => {
+    expect(formatDealValue(1000000)).toBe('$1,000,000')
   })
 })

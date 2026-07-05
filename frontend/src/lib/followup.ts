@@ -27,3 +27,12 @@ export function formatFollowUpDisplay(days: number | null): string {
   if (days === null) return 'No contact'
   return `${days}d`
 }
+
+export function formatDealValue(value: number | null): string {
+  if (!value || value === 0) return 'Not entered'
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value)
+}

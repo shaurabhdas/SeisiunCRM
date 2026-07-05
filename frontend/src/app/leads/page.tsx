@@ -31,7 +31,8 @@ import {
 import {
   calculateDaysSinceContact,
   getFollowUpColorToken,
-  formatFollowUpDisplay
+  formatFollowUpDisplay,
+  formatDealValue
 } from "@/lib/followup"
 
 interface Account {
@@ -80,6 +81,7 @@ interface Lead {
   stage: string // contact, outreach, connected, presentation, demo, evaluating, disqualified
   openDate: string | null
   forecastCloseDate: string | null
+  dealValue: number | null
   painPoints: string | null
   competitor: string | null
   lastConnectDate: string | null
@@ -124,7 +126,8 @@ export default function LeadsPage() {
     industry: "",
     companySize: "",
     competitor: "",
-    painPoints: ""
+    painPoints: "",
+    dealValue: 0 as string | number
   })
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false)
   const [deleteError, setDeleteError] = React.useState<string | null>(null)
@@ -147,7 +150,8 @@ export default function LeadsPage() {
     accountId: "",
     salesRegion: "US East",
     forecastCloseDate: "",
-    painPoints: ""
+    painPoints: "",
+    dealValue: "" as string | number
   })
   
   const [newContactForm, setNewContactForm] = React.useState({
@@ -251,7 +255,8 @@ export default function LeadsPage() {
           accountId: newLeadForm.accountId || null,
           salesRegion: newLeadForm.salesRegion,
           forecastCloseDate: newLeadForm.forecastCloseDate,
-          painPoints: newLeadForm.painPoints
+          painPoints: newLeadForm.painPoints,
+          dealValue: newLeadForm.dealValue !== "" && newLeadForm.dealValue !== null ? Number(newLeadForm.dealValue) : 0
         })
       })
 
@@ -268,7 +273,8 @@ export default function LeadsPage() {
           accountId: "",
           salesRegion: "US East",
           forecastCloseDate: "",
-          painPoints: ""
+          painPoints: "",
+          dealValue: ""
         })
         setAccountQuery("")
         setIsAccountConfirmed(false)
@@ -315,7 +321,8 @@ export default function LeadsPage() {
           industry: editForm.industry,
           companySize: editForm.companySize,
           competitor: editForm.competitor,
-          painPoints: editForm.painPoints
+          painPoints: editForm.painPoints,
+          dealValue: editForm.dealValue !== "" && editForm.dealValue !== null ? Number(editForm.dealValue) : 0
         })
       })
 
@@ -1008,7 +1015,8 @@ export default function LeadsPage() {
                                 industry: selectedLead.account?.industry || "",
                                 companySize: selectedLead.account?.companySize || "",
                                 competitor: selectedLead.competitor || "",
-                                painPoints: selectedLead.painPoints || ""
+                                painPoints: selectedLead.painPoints || "",
+                                dealValue: selectedLead.dealValue !== null && selectedLead.dealValue !== undefined ? Number(selectedLead.dealValue) : 0
                               })
                               setShowMoreMenu(false)
                             }}
@@ -1140,6 +1148,18 @@ export default function LeadsPage() {
                         </div>
 
                         <div>
+                          <label className="text-3xs uppercase font-bold text-muted-foreground">Estimated Deal Value (USD)</label>
+                          <input 
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={editForm.dealValue}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, dealValue: e.target.value }))}
+                            className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
+                          />
+                        </div>
+
+                        <div>
                           <label className="text-3xs uppercase font-bold text-muted-foreground">Sales Region *</label>
                           <select
                             value={editForm.salesRegion}
@@ -1230,6 +1250,14 @@ export default function LeadsPage() {
                             {selectedLead.forecastCloseDate ? new Date(selectedLead.forecastCloseDate).toLocaleDateString('en-US', {
                               year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC'
                             }) : <span className="text-muted-foreground/60 italic">Not set</span>}
+                          </p>
+                        </div>
+
+                        {/* Deal Value */}
+                        <div>
+                          <p className="text-3xs font-bold uppercase text-muted-foreground">Deal Value</p>
+                          <p className={`mt-0.5 ${(!selectedLead.dealValue || Number(selectedLead.dealValue) === 0) ? 'text-muted-foreground/60' : 'text-foreground'}`}>
+                            {formatDealValue(selectedLead.dealValue)}
                           </p>
                         </div>
 
@@ -1651,6 +1679,20 @@ export default function LeadsPage() {
                       onChange={(e) => setNewLeadForm(prev => ({ ...prev, forecastCloseDate: e.target.value }))}
                       className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
                     />
+                  </div>
+
+                  <div>
+                    <label className="text-3xs uppercase font-bold text-muted-foreground">Estimated Deal Value (USD)</label>
+                    <input 
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="e.g. 350000"
+                      value={newLeadForm.dealValue}
+                      onChange={(e) => setNewLeadForm(prev => ({ ...prev, dealValue: e.target.value }))}
+                      className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
+                    />
+                    <p className="text-3xs text-muted-foreground mt-1">Used for pipeline and account reporting. Update as the deal progresses.</p>
                   </div>
 
                   <div>
