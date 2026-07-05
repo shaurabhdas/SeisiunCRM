@@ -573,8 +573,15 @@ function AccountsPageContent() {
             </div>
 
             {/* ZONE C: Account Detail Panel */}
-            {selectedAccountId && selectedAccount && (
+            {selectedAccountId && (
               <div className="w-1/3 border rounded-lg bg-card shadow-sm flex flex-col overflow-hidden animate-slide-in h-full">
+                {!selectedAccount ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-(--primary) mb-2"></div>
+                    <p className="text-3xs font-semibold uppercase tracking-wider text-muted-foreground/85">Loading Account Details...</p>
+                  </div>
+                ) : (
+                  <>
                 
                 {/* Section 1: Detail Panel Header */}
                 <div className="flex items-start justify-between border-b p-4 bg-muted/10 shrink-0">
@@ -1212,6 +1219,8 @@ function AccountsPageContent() {
                   </div>
 
                 </div>
+                  </>
+                )}
               </div>
             )}
           </div>
