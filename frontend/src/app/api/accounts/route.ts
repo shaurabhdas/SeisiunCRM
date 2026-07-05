@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { fetchAccountsWithMetrics, supabase } from '@/lib/accounts'
+import { randomUUID } from 'crypto'
 
 export async function GET() {
   try {
@@ -19,6 +20,7 @@ export async function POST(req: Request) {
     const { data, error } = await supabase
       .from('accounts')
       .insert({
+        id: randomUUID(),
         name,
         industry: industry || null,
         company_size: company_size || null,

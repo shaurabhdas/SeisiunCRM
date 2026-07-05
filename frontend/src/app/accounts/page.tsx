@@ -43,8 +43,8 @@ function AccountsPageContent() {
   const [selectedRegion, setSelectedRegion] = React.useState<string>("All Regions")
   const [selectedIndustry, setSelectedIndustry] = React.useState<string>("All Industries")
 
-  // Selected Account (Zone C) - derived from URL query parameter (Single Source of Truth)
-  const selectedAccountId = urlAccountId
+  // Selected Account (Zone C) - synchronized with URL silently via history.replaceState
+  const [selectedAccountId, setSelectedAccountId] = React.useState<string | null>(null)
 
   // Collapsible sections state
   const [collapsedSections, setCollapsedSections] = React.useState<Record<string, boolean>>({
@@ -107,9 +107,9 @@ function AccountsPageContent() {
     loadAccountsData()
   }, [])
 
-  const loadAccountsData = async () => {
+  const loadAccountsData = async (silent = false) => {
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       const res = await fetch(`/api/accounts?t=${Date.now()}`)
       if (!res.ok) throw new Error("Failed to fetch accounts")
       const data = await res.json()
@@ -125,11 +125,26 @@ function AccountsPageContent() {
     } catch (err) {
       console.error("Error loading accounts data:", err)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
-  // URL parameter is the single source of truth, no synchronization effects needed
+  // Set initial selection from URL query param on mount
+  React.useEffect(() => {
+    const initialParam = searchParams.get('account')
+    if (initialParam) {
+      setSelectedAccountId(initialParam)
+    }
+  }, [])
+
+  // Silently sync state back to URL query param (without triggering Next.js router transitions/flicker)
+  React.useEffect(() => {
+    if (selectedAccountId) {
+      window.history.replaceState(null, '', `/accounts?account=${selectedAccountId}`)
+    } else {
+      window.history.replaceState(null, '', '/accounts')
+    }
+  }, [selectedAccountId])
 
   const selectedAccount = accounts.find(a => a.id === selectedAccountId)
 
@@ -171,11 +186,11 @@ function AccountsPageContent() {
         notes: ""
       })
 
-      // Immediately open Zone C for new account by navigating
-      router.replace(`/accounts?account=${createdAccount.id}`)
+      // Immediately open Zone C for new account by setting state
+      setSelectedAccountId(createdAccount.id)
 
-      // Refetch accounts in the background
-      await loadAccountsData()
+      // Refetch accounts in the background silently
+      await loadAccountsData(true)
     } catch (err) {
       console.error("Error creating account:", err)
     }
@@ -201,7 +216,7 @@ function AccountsPageContent() {
 
       if (!res.ok) throw new Error("Failed to update account")
 
-      await loadAccountsData()
+      await loadAccountsData(true)
       setIsEditingAccount(false)
     } catch (err) {
       console.error("Error updating account:", err)
@@ -218,9 +233,9 @@ function AccountsPageContent() {
 
       if (!res.ok) throw new Error("Failed to delete account")
 
-      router.replace('/accounts')
+      setSelectedAccountId(null)
       setIsDeleteAccountOpen(false)
-      await loadAccountsData()
+      await loadAccountsData(true)
     } catch (err) {
       console.error("Error deleting account cascade:", err)
     }
@@ -247,7 +262,7 @@ function AccountsPageContent() {
       })
 
       if (res.ok) {
-        await loadAccountsData()
+        await loadAccountsData(true)
         setIsAddingLead(false)
         setNewLeadForm({
           opportunityName: "",
@@ -281,7 +296,7 @@ function AccountsPageContent() {
 
       if (error) throw error
 
-      await loadAccountsData()
+      await loadAccountsData(true)
       setIsAddingContact(false)
       setNewContactForm({
         firstName: "",
@@ -521,7 +536,7 @@ function AccountsPageContent() {
                           <tr 
                             key={account.id}
                             style={borderStyle}
-                            onClick={() => router.replace(`/accounts?account=${account.id}`)}
+                            onClick={() => setSelectedAccountId(account.id)}
                             className={`cursor-pointer transition-colors hover:bg-(--secondary) border-b last:border-0
                               ${isSelected ? 'bg-indigo-50/20 dark:bg-indigo-950/5 font-medium' : 'bg-card'}
                             `}
@@ -657,7 +672,7 @@ function AccountsPageContent() {
                     </div>
 
                     <button 
-                      onClick={() => router.replace('/accounts')}
+                      onClick={() => setSelectedAccountId(null)}
                       className="rounded-md p-1 text-muted-foreground hover:bg-muted"
                     >
                       <X className="size-4" />
