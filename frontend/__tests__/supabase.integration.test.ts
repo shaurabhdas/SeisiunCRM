@@ -592,3 +592,150 @@ describe('fetchAccountsWithMetrics: deduplication and activity integrity', () =>
   })
 })
 
+describe('Deals schema verification', () => {
+
+  let testDealId: string
+  let testDealActivityId: string
+
+  afterAll(async () => {
+    if (testDealId) {
+      await supabase.from('deal_stage_history').delete().eq('deal_id', testDealId)
+      await supabase.from('deal_activities').delete().eq('deal_id', testDealId)
+      await supabase.from('deals').delete().eq('id', testDealId)
+    }
+  })
+
+  it('creates a deal record with correct defaults', async () => {
+    const { data: deal, error } = await supabase
+      .from('deals')
+      .insert({
+        account_id: testAccountId,
+        opportunity_name: 'Schema Test Deal',
+        deal_type: 'poc',
+        reported_value: 60000,
+        value_confidence: 'estimated',
+        stage: 'proposal_submitted',
+        sales_region: 'US East',
+      })
+      .select()
+      .single()
+
+    expect(error).toBeNull()
+    expect(deal.stage).toBe('proposal_submitted')
+    expect(deal.value_confidence).toBe('estimated')
+    expect(Number(deal.reported_value)).toBe(60000)
+    expect(deal.originating_deal_id).toBeNull()
+
+    testDealId = deal.id
+  })
+
+  it('writes a stage history row when deal is created', async () => {
+    await supabase
+      .from('deal_stage_history')
+      .insert({
+        deal_id: testDealId,
+        from_stage: null,
+        to_stage: 'proposal_submitted',
+      })
+
+    const { data: history, error } = await supabase
+      .from('deal_stage_history')
+      .select()
+      .eq('deal_id', testDealId)
+
+    expect(error).toBeNull()
+    expect(history.length).toBe(1)
+    expect(history[0].from_stage).toBeNull()
+    expect(history[0].to_stage).toBe('proposal_submitted')
+  })
+
+  it('creates a deal activity linked to the deal', async () => {
+    const today = new Date().toISOString().split('T')[0]
+
+    const { data: activity, error } = await supabase
+      .from('deal_activities')
+      .insert({
+        deal_id: testDealId,
+        activity_type: 'email',
+        activity_date: today,
+        note: 'Sent formal proposal document to client.',
+      })
+      .select()
+      .single()
+
+    expect(error).toBeNull()
+    expect(activity.deal_id).toBe(testDealId)
+    expect(activity.activity_type).toBe('email')
+
+    testDealActivityId = activity.id
+  })
+
+  it('links a full contract deal to an originating poc deal', async () => {
+    const { data: fullContractDeal, error } = await supabase
+      .from('deals')
+      .insert({
+        account_id: testAccountId,
+        originating_deal_id: testDealId,
+        opportunity_name: 'Schema Test Full Contract',
+        deal_type: 'full_contract',
+        reported_value: 350000,
+        value_confidence: 'estimated',
+        stage: 'proposal_submitted',
+        sales_region: 'US East',
+      })
+      .select()
+      .single()
+
+    expect(error).toBeNull()
+    expect(fullContractDeal.originating_deal_id).toBe(testDealId)
+    expect(fullContractDeal.deal_type).toBe('full_contract')
+
+    await supabase.from('deals').delete().eq('id', fullContractDeal.id)
+  })
+
+  it('cascades delete of deal_activities and deal_stage_history when deal is deleted', async () => {
+    const { data: tempDeal } = await supabase
+      .from('deals')
+      .insert({
+        account_id: testAccountId,
+        opportunity_name: 'Cascade Delete Test',
+        deal_type: 'poc',
+        reported_value: 60000,
+        value_confidence: 'estimated',
+        stage: 'proposal_submitted',
+        sales_region: 'US East',
+      })
+      .select()
+      .single()
+
+    await supabase.from('deal_activities').insert({
+      deal_id: tempDeal.id,
+      activity_type: 'call',
+      activity_date: new Date().toISOString().split('T')[0],
+      note: 'Cascade test activity',
+    })
+
+    await supabase.from('deal_stage_history').insert({
+      deal_id: tempDeal.id,
+      from_stage: null,
+      to_stage: 'proposal_submitted',
+    })
+
+    await supabase.from('deals').delete().eq('id', tempDeal.id)
+
+    const { data: activities } = await supabase
+      .from('deal_activities')
+      .select()
+      .eq('deal_id', tempDeal.id)
+
+    const { data: history } = await supabase
+      .from('deal_stage_history')
+      .select()
+      .eq('deal_id', tempDeal.id)
+
+    expect(activities.length).toBe(0)
+    expect(history.length).toBe(0)
+  })
+})
+
+
