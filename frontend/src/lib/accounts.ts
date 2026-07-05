@@ -80,7 +80,7 @@ export const supabase = new Proxy({}, {
     }
     return value
   }
-}) as ReturnType<typeof createClient>
+}) as any
 
 export type AccountWithMetrics = {
   id: string

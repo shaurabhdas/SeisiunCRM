@@ -12,7 +12,7 @@ export async function PUT(
     // Omit stage changes in this route as specified
     const { stage, ...updates } = body
 
-    const { data: updatedDeal, error } = await supabase
+    const { data: updatedDeal, error } = await (supabase as any)
       .from('deals')
       .update(updates)
       .eq('id', id)

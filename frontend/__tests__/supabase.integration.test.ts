@@ -828,6 +828,45 @@ describe('Deals stage gate validation', () => {
     expect(result.error).toBeTruthy()
   })
 
+  it('blocks closed_lost without a lost reason even when deal is not in negotiation stage', async () => {
+    const today = new Date().toISOString().split('T')[0]
+
+    const { data: proposalDeal } = await supabase
+      .from('deals')
+      .insert({
+        account_id: testAccountId,
+        opportunity_name: 'Proposal Stage Lost Test',
+        deal_type: 'full_contract',
+        reported_value: 120000,
+        value_confidence: 'estimated',
+        stage: 'proposal_submitted',
+        proposal_date: today,
+        sales_region: 'US East',
+      })
+      .select()
+      .single()
+
+    const response = await fetch(
+      `http://localhost:3000/api/deals/${proposalDeal.id}/stage`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-supabase-schema': 'test'
+        },
+        body: JSON.stringify({ toStage: 'closed_lost' }),
+      }
+    )
+
+    expect(response.status).toBe(400)
+    const result = await response.json()
+    expect(result.error).toBeTruthy()
+
+    await supabase.from('deal_stage_history').delete().eq('deal_id', proposalDeal.id)
+    await supabase.from('deal_activities').delete().eq('deal_id', proposalDeal.id)
+    await supabase.from('deals').delete().eq('id', proposalDeal.id)
+  })
+
   it('blocks closed_lost with an invalid lost reason', async () => {
     const response = await fetch(
       `http://localhost:3000/api/deals/${gateTestDealId}/stage`,
