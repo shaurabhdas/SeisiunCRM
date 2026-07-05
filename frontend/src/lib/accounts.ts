@@ -11,28 +11,28 @@ if (isTest) {
   }
 }
 
-let _supabaseClient: any = null
-export const supabase = new Proxy({} as any, {
-  get(target, prop) {
-    if (!_supabaseClient) {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_TEST_URL
-      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_TEST_SERVICE_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  || process.env.NEXT_PUBLIC_SUPABASE_TEST_URL
 
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Missing Supabase credentials. Check your environment variables.')
-      }
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  || process.env.SUPABASE_TEST_SERVICE_KEY
 
-      const supabaseSchema = process.env.SUPABASE_DB_SCHEMA || process.env.SUPABASE_TEST_SCHEMA || 'public'
+const supabaseSchema = process.env.SUPABASE_DB_SCHEMA
+  || process.env.SUPABASE_TEST_SCHEMA
+  || 'public'
 
-      _supabaseClient = createClient(supabaseUrl, supabaseKey, {
-        db: {
-          schema: supabaseSchema
-        },
-        ...(ws ? { realtime: { transport: ws } } : {})
-      })
-    }
-    return _supabaseClient[prop]
-  }
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error(
+    'Missing Supabase credentials. Ensure NEXT_PUBLIC_SUPABASE_URL and ' +
+    'SUPABASE_SERVICE_ROLE_KEY are set in your environment.'
+  )
+}
+
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  db: {
+    schema: supabaseSchema
+  },
+  ...(ws ? { realtime: { transport: ws } } : {})
 })
 
 export type AccountWithMetrics = {
