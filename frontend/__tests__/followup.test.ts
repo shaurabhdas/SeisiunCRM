@@ -46,6 +46,16 @@ describe('calculateDaysSinceContact', () => {
     const result = calculateDaysSinceContact(tomorrow)
     expect(result).toBeGreaterThanOrEqual(0)
   })
+
+  it('calculates correctly using local calendar date not UTC midnight', () => {
+    const today = new Date()
+    const localDateString = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0'),
+    ].join('-')
+    expect(calculateDaysSinceContact(localDateString)).toBe(0)
+  })
 })
 
 describe('getFollowUpColorToken', () => {

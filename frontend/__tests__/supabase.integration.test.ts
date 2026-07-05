@@ -211,3 +211,87 @@ describe('Lead delete cascade', () => {
     expect(lead.length).toBe(0)
   })
 })
+
+describe('Schema migration verification', () => {
+
+  it('deal_value field exists on test.leads with correct type and default', async () => {
+    const today = new Date().toISOString().split('T')[0]
+
+    const { data: lead, error } = await supabase
+      .from('leads')
+      .insert({
+        opportunity_name: 'Deal Value Test Lead',
+        account_id: testAccountId,
+        stage: 'contact',
+        open_date: today,
+        forecast_close_date: '2026-12-31',
+        sales_region: 'US East',
+      })
+      .select('deal_value')
+      .single()
+
+    expect(error).toBeNull()
+    expect(lead.deal_value).toBe(0)
+
+    await supabase.from('leads').delete().eq('opportunity_name', 'Deal Value Test Lead')
+  })
+
+  it('deal_value accepts a numeric value correctly', async () => {
+    const today = new Date().toISOString().split('T')[0]
+
+    const { data: lead, error } = await supabase
+      .from('leads')
+      .insert({
+        opportunity_name: 'Deal Value Amount Test',
+        account_id: testAccountId,
+        stage: 'contact',
+        open_date: today,
+        forecast_close_date: '2026-12-31',
+        sales_region: 'US East',
+        deal_value: 350000.00,
+      })
+      .select('deal_value')
+      .single()
+
+    expect(error).toBeNull()
+    expect(Number(lead.deal_value)).toBe(350000)
+
+    await supabase.from('leads').delete().eq('opportunity_name', 'Deal Value Amount Test')
+  })
+
+  it('notes field exists on test.accounts and accepts text', async () => {
+    const { data: account, error } = await supabase
+      .from('accounts')
+      .insert({
+        name: 'Notes Test Account',
+        industry: 'Technology',
+        sales_region: 'US East',
+        notes: 'This is a test note for the account.',
+      })
+      .select('notes')
+      .single()
+
+    expect(error).toBeNull()
+    expect(account.notes).toBe('This is a test note for the account.')
+
+    await supabase.from('accounts').delete().eq('name', 'Notes Test Account')
+  })
+
+  it('notes field on test.accounts defaults to null when not provided', async () => {
+    const { data: account, error } = await supabase
+      .from('accounts')
+      .insert({
+        name: 'No Notes Test Account',
+        industry: 'Technology',
+        sales_region: 'US East',
+      })
+      .select('notes')
+      .single()
+
+    expect(error).toBeNull()
+    expect(account.notes).toBeNull()
+
+    await supabase.from('accounts').delete().eq('name', 'No Notes Test Account')
+  })
+})
+
