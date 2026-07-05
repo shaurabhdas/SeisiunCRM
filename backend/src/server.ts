@@ -864,6 +864,36 @@ app.put('/api/leads/:id', async (req, res) => {
   }
 });
 
+app.delete('/api/leads/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Delete all rows in lead_activities where lead_id matches
+    await prisma.leadActivity.deleteMany({
+      where: { leadId: id }
+    });
+
+    // 2. Delete all rows in lead_stage_history where lead_id matches
+    await prisma.leadStageHistory.deleteMany({
+      where: { leadId: id }
+    });
+
+    // 3. Delete all rows in contacts (LeadContact) where lead_id matches
+    await prisma.leadContact.deleteMany({
+      where: { leadId: id }
+    });
+
+    // 4. Delete the lead row itself from the leads table
+    await prisma.lead.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'Lead deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete lead', details: String(error) });
+  }
+});
+
 // Start Server
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

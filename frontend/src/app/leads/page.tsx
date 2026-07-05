@@ -24,7 +24,8 @@ import {
   Clock,
   Briefcase,
   AlertTriangle,
-  FolderOpen
+  FolderOpen,
+  MoreVertical
 } from "lucide-react"
 
 interface Account {
@@ -106,6 +107,27 @@ export default function LeadsPage() {
   const [isAddLeadOpen, setIsAddLeadOpen] = React.useState(false)
   const [isDisqualifyOpen, setIsDisqualifyOpen] = React.useState(false)
   const [disqualifyReason, setDisqualifyReason] = React.useState("no_budget")
+
+  // Edit / Delete / Dropdown State
+  const [showMoreMenu, setShowMoreMenu] = React.useState(false)
+  const [isEditingLead, setIsEditingLead] = React.useState(false)
+  const [editForm, setEditForm] = React.useState({
+    opportunityName: "",
+    forecastCloseDate: "",
+    salesRegion: "US East",
+    industry: "",
+    companySize: "",
+    competitor: "",
+    painPoints: ""
+  })
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false)
+  const [deleteError, setDeleteError] = React.useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = React.useState(false)
+
+  // Account Confirmation State (Fix 1)
+  const [isAccountConfirmed, setIsAccountConfirmed] = React.useState(false)
+  const [confirmedAccountName, setConfirmedAccountName] = React.useState("")
+  const [accountValidationError, setAccountValidationError] = React.useState<string | null>(null)
 
   // Inline forms in Zone C
   const [isAddingContact, setIsAddingContact] = React.useState(false)
@@ -206,7 +228,12 @@ export default function LeadsPage() {
 
   const handleCreateLead = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newLeadForm.opportunityName || (!newLeadForm.accountName && !newLeadForm.accountId)) return
+    if (!newLeadForm.opportunityName) return
+
+    if (!isAccountConfirmed) {
+      setAccountValidationError("Please confirm or clear the account name before saving.")
+      return
+    }
 
     try {
       const res = await fetch(`${apiUrl}/leads`, {
@@ -214,7 +241,7 @@ export default function LeadsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           opportunityName: newLeadForm.opportunityName,
-          accountName: newLeadForm.accountName,
+          accountName: confirmedAccountName,
           accountId: newLeadForm.accountId || null,
           salesRegion: newLeadForm.salesRegion,
           forecastCloseDate: newLeadForm.forecastCloseDate,
@@ -238,6 +265,9 @@ export default function LeadsPage() {
           painPoints: ""
         })
         setAccountQuery("")
+        setIsAccountConfirmed(false)
+        setConfirmedAccountName("")
+        setAccountValidationError(null)
         setIsAddLeadOpen(false)
         
         // Open Zone C for new lead
@@ -245,6 +275,78 @@ export default function LeadsPage() {
       }
     } catch (err) {
       console.error("Error creating lead:", err)
+    }
+  }
+
+  const handleConfirmNewAccount = () => {
+    if (!accountQuery.trim()) return
+    setIsAccountConfirmed(true)
+    setConfirmedAccountName(accountQuery)
+    setNewLeadForm(prev => ({ ...prev, accountName: accountQuery, accountId: "" }))
+    setAccountValidationError(null)
+  }
+
+  const handleClearAccount = () => {
+    setAccountQuery("")
+    setConfirmedAccountName("")
+    setIsAccountConfirmed(false)
+    setNewLeadForm(prev => ({ ...prev, accountName: "", accountId: "" }))
+    setAccountValidationError(null)
+  }
+
+  const handleSaveLeadChanges = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedLeadId) return
+
+    try {
+      const res = await fetch(`${apiUrl}/leads/${selectedLeadId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          opportunityName: editForm.opportunityName,
+          forecastCloseDate: editForm.forecastCloseDate,
+          salesRegion: editForm.salesRegion,
+          industry: editForm.industry,
+          companySize: editForm.companySize,
+          competitor: editForm.competitor,
+          painPoints: editForm.painPoints
+        })
+      })
+
+      if (res.ok) {
+        await fetchLeads()
+        setIsEditingLead(false)
+      } else {
+        alert("Failed to save changes")
+      }
+    } catch (err) {
+      console.error("Error saving lead changes:", err)
+    }
+  }
+
+  const handleDeleteLead = async () => {
+    if (!selectedLeadId) return
+    setIsDeleting(true)
+    setDeleteError(null)
+
+    try {
+      const res = await fetch(`${apiUrl}/leads/${selectedLeadId}`, {
+        method: "DELETE"
+      })
+
+      if (res.ok) {
+        await fetchLeads()
+        setIsDeleteModalOpen(false)
+        setSelectedLeadId(null) // Close Zone C
+      } else {
+        const errData = await res.json()
+        setDeleteError(errData.error || "Something went wrong. The lead was not deleted. Please try again.")
+      }
+    } catch (err) {
+      console.error("Error deleting lead:", err)
+      setDeleteError("Something went wrong. The lead was not deleted. Please try again.")
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -483,7 +585,8 @@ export default function LeadsPage() {
     if (!lead.lastConnectDate) {
       return {
         text: "No contact",
-        colorClass: "bg-(--followup-critical) text-(--followup-critical)",
+        colorClass: "bg-(--followup-critical)",
+        textClass: "font-bold text-(--followup-critical)",
         days: 999
       }
     }
@@ -492,26 +595,30 @@ export default function LeadsPage() {
     
     if (days >= 10) {
       return {
-        text: `${days} days ago`,
-        colorClass: "bg-(--followup-critical) text-(--followup-critical) font-bold",
+        text: `${days}d`,
+        colorClass: "bg-(--followup-critical)",
+        textClass: "font-bold text-foreground",
         days
       }
     } else if (days >= 7) {
       return {
-        text: `${days} days ago`,
-        colorClass: "bg-(--followup-urgent) text-(--followup-urgent)",
+        text: `${days}d`,
+        colorClass: "bg-(--followup-urgent)",
+        textClass: "font-bold text-foreground",
         days
       }
     } else if (days >= 3) {
       return {
-        text: `${days} days ago`,
-        colorClass: "bg-(--followup-warning) text-(--followup-warning)",
+        text: `${days}d`,
+        colorClass: "bg-(--followup-warning)",
+        textClass: "text-foreground font-normal",
         days
       }
     } else {
       return {
-        text: `${days} days ago`,
-        colorClass: "bg-(--followup-safe) text-(--followup-safe)",
+        text: `${days}d`,
+        colorClass: "bg-(--followup-safe)",
+        textClass: "text-foreground font-normal",
         days
       }
     }
@@ -811,7 +918,7 @@ export default function LeadsPage() {
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-muted-foreground/60">-</span>
+                                <span className="text-(--muted-foreground) text-xs font-normal">No contacts</span>
                               )}
                             </td>
                             <td className="p-3">
@@ -821,8 +928,8 @@ export default function LeadsPage() {
                             </td>
                             <td className="p-3 text-xs">
                               <div className="flex items-center gap-1.5">
-                                <span className={`size-2 rounded-full ${followUp.colorClass.split(' ')[0]}`} />
-                                <span className={lead.lastConnectDate && followUp.days >= 10 ? 'font-bold text-(--followup-critical)' : 'text-foreground'}>
+                                <span className={`size-2 rounded-full ${followUp.colorClass}`} />
+                                <span className={followUp.textClass}>
                                   {followUp.text}
                                 </span>
                               </div>
@@ -862,10 +969,24 @@ export default function LeadsPage() {
               <div className="w-1/3 border bg-card rounded-lg shadow-md flex flex-col overflow-hidden min-h-0 animate-in slide-in-from-right duration-200">
                 
                 {/* Section 1: Lead Header */}
-                <div className="border-b p-4 flex justify-between items-start bg-muted/10">
+                <div className="border-b p-4 flex justify-between items-start bg-muted/10 relative">
                   <div className="flex-1 min-w-0 pr-2">
-                    <h2 className="text-lg font-bold text-foreground leading-tight truncate">{selectedLead.opportunityName}</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5 font-medium">{selectedLead.account?.name || 'No account linked'}</p>
+                    {isEditingLead ? (
+                      <div>
+                        <label className="text-3xs uppercase font-bold text-muted-foreground">Opportunity Name *</label>
+                        <input 
+                          type="text"
+                          value={editForm.opportunityName}
+                          onChange={(e) => setEditForm(prev => ({ ...prev, opportunityName: e.target.value }))}
+                          className="w-full border rounded p-1.5 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary) font-semibold animate-fade-in"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <h2 className="text-lg font-bold text-foreground leading-tight truncate">{selectedLead.opportunityName}</h2>
+                        <p className="text-xs text-muted-foreground mt-0.5 font-medium">{selectedLead.account?.name || 'No account linked'}</p>
+                      </>
+                    )}
                     <div className="mt-3 flex items-center gap-2">
                       <span className={getStageBadgeClasses(selectedLead.stage)}>
                         {selectedLead.stage}
@@ -877,17 +998,62 @@ export default function LeadsPage() {
                       )}
                     </div>
                   </div>
-                  <button 
-                    onClick={() => {
-                      setSelectedLeadId(null)
-                      setIsAddingContact(false)
-                      setIsLoggingActivity(false)
-                      setSelectedActivityType(null)
-                    }}
-                    className="rounded-md p-1 text-muted-foreground hover:bg-muted"
-                  >
-                    <X className="size-4" />
-                  </button>
+                  
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="relative">
+                      <button 
+                        onClick={() => setShowMoreMenu(prev => !prev)}
+                        className="rounded-md p-1 text-muted-foreground hover:bg-muted"
+                      >
+                        <MoreVertical className="size-4" />
+                      </button>
+                      
+                      {showMoreMenu && (
+                        <div className="absolute right-0 mt-1 w-32 border bg-card rounded-md shadow-lg py-1 z-20 text-xs">
+                          <button
+                            onClick={() => {
+                              setIsEditingLead(true)
+                              setEditForm({
+                                opportunityName: selectedLead.opportunityName,
+                                forecastCloseDate: selectedLead.forecastCloseDate ? selectedLead.forecastCloseDate.split('T')[0] : "",
+                                salesRegion: selectedLead.account?.salesRegion || "US East",
+                                industry: selectedLead.account?.industry || "",
+                                companySize: selectedLead.account?.companySize || "",
+                                competitor: selectedLead.competitor || "",
+                                painPoints: selectedLead.painPoints || ""
+                              })
+                              setShowMoreMenu(false)
+                            }}
+                            className="w-full text-left px-3 py-1.5 hover:bg-muted text-foreground font-medium"
+                          >
+                            Edit Lead
+                          </button>
+                          <button
+                            onClick={() => {
+                              setIsDeleteModalOpen(true)
+                              setShowMoreMenu(false)
+                            }}
+                            className="w-full text-left px-3 py-1.5 hover:bg-muted text-(--destructive) font-medium"
+                          >
+                            Delete Lead
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        setSelectedLeadId(null)
+                        setIsAddingContact(false)
+                        setIsLoggingActivity(false)
+                        setSelectedActivityType(null)
+                        setIsEditingLead(false)
+                      }}
+                      className="rounded-md p-1 text-muted-foreground hover:bg-muted"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -946,7 +1112,7 @@ export default function LeadsPage() {
                               Move to {nextStage ? nextStage.charAt(0).toUpperCase() + nextStage.slice(1) : 'Next Stage'}
                             </button>
                             {progressionError && (
-                              <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 w-48 -translate-x-1/2 rounded bg-neutral-900 p-2 text-3xs font-medium text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 dark:bg-neutral-800">
+                              <div className="pointer-events-none absolute top-full left-1/2 mt-2 w-48 -translate-x-1/2 rounded bg-neutral-900 p-2 text-3xs font-medium text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 dark:bg-neutral-800">
                                 <p className="flex items-center gap-1 leading-normal">
                                   <Info className="size-3 shrink-0 text-amber-500" />
                                   {progressionError}
@@ -971,119 +1137,146 @@ export default function LeadsPage() {
                   {/* Section 2: Overview */}
                   <div>
                     <h3 className="text-2xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Overview</h3>
-                    <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-xs border rounded-lg p-3 bg-muted/5">
-                      
-                      {/* Open Date */}
-                      <div>
-                        <p className="text-3xs font-bold uppercase text-muted-foreground">Open Date</p>
-                        <p className="mt-0.5 text-foreground">
-                          {selectedLead.openDate ? new Date(selectedLead.openDate).toLocaleDateString('en-US', {
-                            year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC'
-                          }) : "-"}
-                        </p>
-                      </div>
+                    {isEditingLead ? (
+                      <form onSubmit={handleSaveLeadChanges} className="space-y-4 border rounded-lg p-3 bg-muted/15 text-xs animate-fade-in">
+                        
+                        <div>
+                          <label className="text-3xs uppercase font-bold text-muted-foreground">Forecast Close Date *</label>
+                          <input 
+                            type="date"
+                            required
+                            value={editForm.forecastCloseDate}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, forecastCloseDate: e.target.value }))}
+                            className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
+                          />
+                        </div>
 
-                      {/* Forecast Close Date */}
-                      <div className="group relative">
-                        <p className="text-3xs font-bold uppercase text-muted-foreground flex items-center gap-1">
-                          Forecast Close Date
-                          <Pencil className="size-2.5 opacity-0 group-hover:opacity-100 cursor-pointer" onClick={() => {
-                            setEditingField('forecastCloseDate')
-                            setEditValue(selectedLead.forecastCloseDate ? selectedLead.forecastCloseDate.split('T')[0] : '')
-                          }} />
-                        </p>
-                        {editingField === 'forecastCloseDate' ? (
-                          <div className="mt-1 flex items-center gap-1.5">
-                            <input 
-                              type="date"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              className="border rounded p-0.5 text-2xs focus:outline-none"
-                            />
-                            <button onClick={() => handleInlineEdit('forecastCloseDate')} className="text-emerald-600 hover:text-emerald-700">
-                              <Check className="size-3.5" />
-                            </button>
-                          </div>
-                        ) : (
+                        <div>
+                          <label className="text-3xs uppercase font-bold text-muted-foreground">Sales Region *</label>
+                          <select
+                            value={editForm.salesRegion}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, salesRegion: e.target.value }))}
+                            className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
+                          >
+                            <option value="US East">US East</option>
+                            <option value="US West">US West</option>
+                            <option value="Europe">Europe</option>
+                            <option value="APAC">APAC</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-3xs uppercase font-bold text-muted-foreground">Industry</label>
+                          <input 
+                            type="text"
+                            value={editForm.industry}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, industry: e.target.value }))}
+                            className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-3xs uppercase font-bold text-muted-foreground">Company Size</label>
+                          <input 
+                            type="text"
+                            value={editForm.companySize}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, companySize: e.target.value }))}
+                            className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-3xs uppercase font-bold text-muted-foreground">Competitor</label>
+                          <input 
+                            type="text"
+                            value={editForm.competitor}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, competitor: e.target.value }))}
+                            className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-3xs uppercase font-bold text-muted-foreground">Pain Points</label>
+                          <textarea 
+                            value={editForm.painPoints}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, painPoints: e.target.value }))}
+                            className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
+                            rows={3}
+                          />
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-2 border-t mt-3">
+                          <button 
+                            type="button" 
+                            onClick={() => setIsEditingLead(false)}
+                            className="text-2xs font-semibold text-muted-foreground hover:underline"
+                          >
+                            Cancel
+                          </button>
+                          <button 
+                            type="submit" 
+                            className="rounded bg-(--primary) px-3 py-1.5 text-2xs font-semibold text-(--primary-foreground) hover:bg-neutral-800"
+                          >
+                            Save Changes
+                          </button>
+                        </div>
+
+                      </form>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-xs border rounded-lg p-3 bg-muted/5">
+                        
+                        {/* Open Date */}
+                        <div>
+                          <p className="text-3xs font-bold uppercase text-muted-foreground">Open Date</p>
+                          <p className="mt-0.5 text-foreground">
+                            {selectedLead.openDate ? new Date(selectedLead.openDate).toLocaleDateString('en-US', {
+                              year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC'
+                            }) : "-"}
+                          </p>
+                        </div>
+
+                        {/* Forecast Close Date */}
+                        <div>
+                          <p className="text-3xs font-bold uppercase text-muted-foreground">Forecast Close Date</p>
                           <p className="mt-0.5 text-foreground">
                             {selectedLead.forecastCloseDate ? new Date(selectedLead.forecastCloseDate).toLocaleDateString('en-US', {
                               year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC'
                             }) : <span className="text-muted-foreground/60 italic">Not set</span>}
                           </p>
-                        )}
-                      </div>
+                        </div>
 
-                      {/* Region */}
-                      <div>
-                        <p className="text-3xs font-bold uppercase text-muted-foreground">Sales Region</p>
-                        <p className="mt-0.5 text-foreground">{selectedLead.account?.salesRegion || "-"}</p>
-                      </div>
+                        {/* Region */}
+                        <div>
+                          <p className="text-3xs font-bold uppercase text-muted-foreground">Sales Region</p>
+                          <p className="mt-0.5 text-foreground">{selectedLead.account?.salesRegion || "-"}</p>
+                        </div>
 
-                      {/* Industry */}
-                      <div>
-                        <p className="text-3xs font-bold uppercase text-muted-foreground">Industry</p>
-                        <p className="mt-0.5 text-foreground">{selectedLead.account?.industry || "-"}</p>
-                      </div>
+                        {/* Industry */}
+                        <div>
+                          <p className="text-3xs font-bold uppercase text-muted-foreground">Industry</p>
+                          <p className="mt-0.5 text-foreground">{selectedLead.account?.industry || "-"}</p>
+                        </div>
 
-                      {/* Company Size */}
-                      <div>
-                        <p className="text-3xs font-bold uppercase text-muted-foreground">Company Size</p>
-                        <p className="mt-0.5 text-foreground">{selectedLead.account?.companySize || "-"}</p>
-                      </div>
+                        {/* Company Size */}
+                        <div>
+                          <p className="text-3xs font-bold uppercase text-muted-foreground">Company Size</p>
+                          <p className="mt-0.5 text-foreground">{selectedLead.account?.companySize || "-"}</p>
+                        </div>
 
-                      {/* Competitor */}
-                      <div className="group relative">
-                        <p className="text-3xs font-bold uppercase text-muted-foreground flex items-center gap-1">
-                          Competitor
-                          <Pencil className="size-2.5 opacity-0 group-hover:opacity-100 cursor-pointer" onClick={() => {
-                            setEditingField('competitor')
-                            setEditValue(selectedLead.competitor || '')
-                          }} />
-                        </p>
-                        {editingField === 'competitor' ? (
-                          <div className="mt-1 flex items-center gap-1.5">
-                            <input 
-                              type="text"
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              className="border rounded p-0.5 text-2xs focus:outline-none w-full"
-                            />
-                            <button onClick={() => handleInlineEdit('competitor')} className="text-emerald-600 hover:text-emerald-700">
-                              <Check className="size-3.5" />
-                            </button>
-                          </div>
-                        ) : (
+                        {/* Competitor */}
+                        <div>
+                          <p className="text-3xs font-bold uppercase text-muted-foreground">Competitor</p>
                           <p className="mt-0.5 text-foreground">{selectedLead.competitor || <span className="text-muted-foreground/50">None tracked</span>}</p>
-                        )}
-                      </div>
+                        </div>
 
-                      {/* Pain Points */}
-                      <div className="col-span-2 group relative border-t pt-2 mt-2">
-                        <p className="text-3xs font-bold uppercase text-muted-foreground flex items-center gap-1">
-                          Pain Points
-                          <Pencil className="size-2.5 opacity-0 group-hover:opacity-100 cursor-pointer" onClick={() => {
-                            setEditingField('painPoints')
-                            setEditValue(selectedLead.painPoints || '')
-                          }} />
-                        </p>
-                        {editingField === 'painPoints' ? (
-                          <div className="mt-1 flex flex-col gap-1">
-                            <textarea 
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              className="border rounded p-1 text-2xs focus:outline-none w-full"
-                              rows={3}
-                            />
-                            <button onClick={() => handleInlineEdit('painPoints')} className="self-end text-emerald-600 hover:text-emerald-700">
-                              <Check className="size-3.5" />
-                            </button>
-                          </div>
-                        ) : (
+                        {/* Pain Points */}
+                        <div className="col-span-2 border-t pt-2 mt-2">
+                          <p className="text-3xs font-bold uppercase text-muted-foreground">Pain Points</p>
                           <p className="mt-1 text-foreground leading-normal whitespace-pre-line">{selectedLead.painPoints || <span className="text-muted-foreground/50">None logged</span>}</p>
-                        )}
-                      </div>
+                        </div>
 
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Section 3: Stakeholder Analysis */}
@@ -1358,93 +1551,144 @@ export default function LeadsPage() {
               {/* Account Search Input */}
               <div className="relative">
                 <label className="text-3xs uppercase font-bold text-muted-foreground">Account Name *</label>
-                <input 
-                  type="text"
-                  required
-                  placeholder="Search existing or type to create new..."
-                  value={accountQuery}
-                  onChange={(e) => {
-                    setAccountQuery(e.target.value)
-                    setNewLeadForm(prev => ({ ...prev, accountName: e.target.value, accountId: "" }))
-                  }}
-                  className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
-                />
-                
-                {filteredAccounts.length > 0 && (
-                  <div className="absolute left-0 right-0 mt-1 border bg-card rounded-md shadow-lg max-h-40 overflow-y-auto z-50 divide-y">
-                    {filteredAccounts.map(acc => (
-                      <div 
-                        key={acc.id}
-                        onClick={() => {
-                          setNewLeadForm(prev => ({ 
-                            ...prev, 
-                            accountId: acc.id, 
-                            accountName: acc.name,
-                            salesRegion: acc.salesRegion || prev.salesRegion
-                          }))
-                          setAccountQuery(acc.name)
-                          setFilteredAccounts([])
-                        }}
-                        className="p-2 hover:bg-muted text-xs cursor-pointer text-foreground flex justify-between"
-                      >
-                        <span className="font-semibold">{acc.name}</span>
-                        <span className="text-3xs text-muted-foreground">{acc.salesRegion}</span>
+                {isAccountConfirmed ? (
+                  <div className="flex items-center justify-between border border-emerald-200 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-900 dark:text-emerald-400 rounded p-2 mt-1 text-xs">
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <Check className="size-3.5" />
+                      <span>{confirmedAccountName}</span>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={handleClearAccount} 
+                      className="text-muted-foreground hover:text-foreground text-2xs font-semibold"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input 
+                      type="text"
+                      placeholder="Search existing or type to create new..."
+                      value={accountQuery}
+                      onChange={(e) => {
+                        setAccountQuery(e.target.value)
+                        setNewLeadForm(prev => ({ ...prev, accountName: e.target.value, accountId: "" }))
+                        setAccountValidationError(null)
+                      }}
+                      className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
+                    />
+                    
+                    {filteredAccounts.length > 0 && (
+                      <div className="absolute left-0 right-0 mt-1 border bg-card rounded-md shadow-lg max-h-40 overflow-y-auto z-50 divide-y">
+                        {filteredAccounts.map(acc => (
+                          <div 
+                            key={acc.id}
+                            onClick={() => {
+                              setNewLeadForm(prev => ({ 
+                                ...prev, 
+                                accountId: acc.id, 
+                                accountName: acc.name,
+                                salesRegion: acc.salesRegion || prev.salesRegion
+                              }))
+                              setAccountQuery(acc.name)
+                              setIsAccountConfirmed(true)
+                              setConfirmedAccountName(acc.name)
+                              setAccountValidationError(null)
+                              setFilteredAccounts([])
+                            }}
+                            className="p-2 hover:bg-muted text-xs cursor-pointer text-foreground flex justify-between"
+                          >
+                            <span className="font-semibold">{acc.name}</span>
+                            <span className="text-3xs text-muted-foreground">{acc.salesRegion}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    )}
+
+                    {accountQuery.trim() && !allAccounts.some(a => a.name.toLowerCase() === accountQuery.toLowerCase()) && filteredAccounts.length === 0 && (
+                      <div className="mt-2 border border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900/60 rounded-md p-3 space-y-2">
+                        <p className="font-bold text-foreground">{accountQuery}</p>
+                        <p className="text-muted-foreground text-3xs font-medium">New account, not found in existing records</p>
+                        <div className="flex gap-2">
+                          <button 
+                            type="button"
+                            onClick={handleConfirmNewAccount}
+                            className="rounded bg-(--primary) px-3 py-1.5 text-2xs font-semibold text-(--primary-foreground) hover:bg-neutral-800"
+                          >
+                            Confirm New Account
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={handleClearAccount}
+                            className="text-2xs font-semibold text-muted-foreground hover:underline px-1"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
 
-                {accountQuery.trim() && !allAccounts.some(a => a.name.toLowerCase() === accountQuery.toLowerCase()) && (
-                  <div className="absolute left-0 right-0 mt-1 border bg-card rounded-md shadow-lg p-2 z-50 text-2xs text-muted-foreground">
-                    No matching account. Selecting this will create a new account: <span className="font-bold text-foreground">"{accountQuery}"</span> on save.
-                  </div>
+                {accountValidationError && (
+                  <p className="mt-1 text-2xs text-(--destructive) font-semibold">
+                    {accountValidationError}
+                  </p>
                 )}
               </div>
 
-              <div>
-                <label className="text-3xs uppercase font-bold text-muted-foreground">Sales Region *</label>
-                <select
-                  value={newLeadForm.salesRegion}
-                  onChange={(e) => setNewLeadForm(prev => ({ ...prev, salesRegion: e.target.value }))}
-                  className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
-                >
-                  <option value="US East">US East</option>
-                  <option value="US West">US West</option>
-                  <option value="Europe">Europe</option>
-                  <option value="APAC">APAC</option>
-                </select>
-              </div>
+              {isAccountConfirmed && (
+                <>
+                  <div>
+                    <label className="text-3xs uppercase font-bold text-muted-foreground">Sales Region *</label>
+                    <select
+                      value={newLeadForm.salesRegion}
+                      onChange={(e) => setNewLeadForm(prev => ({ ...prev, salesRegion: e.target.value }))}
+                      className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
+                    >
+                      <option value="US East">US East</option>
+                      <option value="US West">US West</option>
+                      <option value="Europe">Europe</option>
+                      <option value="APAC">APAC</option>
+                    </select>
+                  </div>
 
-              <div>
-                <label className="text-3xs uppercase font-bold text-muted-foreground">Forecast Close Date *</label>
-                <input 
-                  type="date"
-                  required
-                  value={newLeadForm.forecastCloseDate}
-                  onChange={(e) => setNewLeadForm(prev => ({ ...prev, forecastCloseDate: e.target.value }))}
-                  className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
-                />
-              </div>
+                  <div>
+                    <label className="text-3xs uppercase font-bold text-muted-foreground">Forecast Close Date *</label>
+                    <input 
+                      type="date"
+                      required
+                      value={newLeadForm.forecastCloseDate}
+                      onChange={(e) => setNewLeadForm(prev => ({ ...prev, forecastCloseDate: e.target.value }))}
+                      className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
+                    />
+                  </div>
 
-              <div>
-                <label className="text-3xs uppercase font-bold text-muted-foreground flex justify-between">
-                  <span>Pain Points</span>
-                  <span className="text-muted-foreground/60 normal-case font-medium">Recommended</span>
-                </label>
-                <textarea 
-                  placeholder="Describe initial pain points or requirements..."
-                  value={newLeadForm.painPoints}
-                  onChange={(e) => setNewLeadForm(prev => ({ ...prev, painPoints: e.target.value }))}
-                  className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
-                  rows={3}
-                />
-                <p className="text-3xs text-muted-foreground mt-1">Helps with handoffs and sales reporting.</p>
-              </div>
+                  <div>
+                    <label className="text-3xs uppercase font-bold text-muted-foreground flex justify-between">
+                      <span>Pain Points</span>
+                      <span className="text-muted-foreground/60 normal-case font-medium">Recommended</span>
+                    </label>
+                    <textarea 
+                      placeholder="Describe initial pain points or requirements..."
+                      value={newLeadForm.painPoints}
+                      onChange={(e) => setNewLeadForm(prev => ({ ...prev, painPoints: e.target.value }))}
+                      className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
+                      rows={3}
+                    />
+                    <p className="text-3xs text-muted-foreground mt-1">Helps with handoffs and sales reporting.</p>
+                  </div>
+                </>
+              )}
 
               <div className="flex justify-end gap-3 pt-3 border-t mt-4">
                 <button 
                   type="button" 
-                  onClick={() => setIsAddLeadOpen(false)}
+                  onClick={() => {
+                    setIsAddLeadOpen(false)
+                    handleClearAccount()
+                  }}
                   className="text-xs font-semibold text-muted-foreground hover:underline"
                 >
                   Cancel
@@ -1457,6 +1701,51 @@ export default function LeadsPage() {
                 </button>
               </div>
             </form>
+          </Card>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-2xs flex items-center justify-center z-50 animate-fade-in">
+          <Card className="w-full max-w-sm p-5 bg-card border shadow-lg rounded-lg space-y-4">
+            <div className="flex justify-between items-center border-b pb-2">
+              <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                <AlertTriangle className="size-4 text-(--destructive)" />
+                Delete Lead?
+              </h2>
+            </div>
+            
+            <p className="text-xs text-muted-foreground leading-normal">
+              Are you sure you want to delete this lead? This will permanently delete the lead, all of its contacts, logged activities, and stage transition history. This action cannot be undone.
+            </p>
+
+            {deleteError && (
+              <div className="rounded-md bg-red-50 p-2.5 dark:bg-red-950/20 border border-red-200 dark:border-red-900 text-3xs font-medium text-(--destructive) leading-normal animate-shake">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-3 border-t mt-4">
+              <button 
+                type="button" 
+                disabled={isDeleting}
+                onClick={() => {
+                  setIsDeleteModalOpen(false)
+                  setDeleteError(null)
+                }}
+                className="text-xs font-semibold text-muted-foreground hover:underline disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDeleteLead}
+                disabled={isDeleting}
+                className="rounded-md bg-(--destructive) px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isDeleting ? "Deleting..." : "Confirm Delete"}
+              </button>
+            </div>
           </Card>
         </div>
       )}

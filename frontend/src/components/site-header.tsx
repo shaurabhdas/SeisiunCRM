@@ -35,10 +35,12 @@ export function SiteHeader() {
         </nav>
       </div>
       
-      <div className="hidden items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-xs text-muted-foreground md:flex shadow-xs">
-        <Sparkles className="size-3.5 text-sky-600 animate-pulse" />
-        <span>Forecast refreshed from Supabase CRM activity</span>
-      </div>
+      {pathname === "/dashboard/forecast-pulse" && (
+        <div className="hidden items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-xs text-muted-foreground md:flex shadow-xs">
+          <Sparkles className="size-3.5 text-sky-600 animate-pulse" />
+          <span>Forecast refreshed from Supabase CRM activity</span>
+        </div>
+      )}
     </header>
   )
 }
