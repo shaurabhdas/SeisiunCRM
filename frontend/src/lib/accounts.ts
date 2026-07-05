@@ -80,57 +80,126 @@ const STAGE_DEPTHS: Record<string, number> = {
 }
 
 export async function fetchAccountsWithMetrics(): Promise<AccountWithMetrics[]> {
-  const { data, error } = await supabase
+  // 1. Fetch all accounts
+  const { data: accounts, error: accountsErr } = await supabase
     .from('accounts')
-    .select(`
-      id,
-      name,
-      industry,
-      company_size,
-      sales_region,
-      notes,
-      leads (
-        id,
-        opportunity_name,
-        stage,
-        last_connect_date,
-        deal_value,
-        forecast_close_date,
-        lead_activities (
-          id,
-          activity_type,
-          activity_date,
-          note
-        )
-      ),
-      contacts (
-        id,
-        first_name,
-        last_name,
-        email,
-        phone,
-        stakeholder_role,
-        lead_id
-      )
-    `)
+    .select('id, name, industry, company_size, sales_region, notes')
 
-  if (error) {
-    throw error
+  if (accountsErr) throw accountsErr
+  if (!accounts) return []
+
+  // 2. Fetch all leads
+  const { data: leads, error: leadsErr } = await supabase
+    .from('leads')
+    .select('id, opportunity_name, stage, last_connect_date, deal_value, forecast_close_date, account_id')
+
+  if (leadsErr) throw leadsErr
+  const allLeads = leads || []
+
+  // Get all lead IDs
+  const leadIds = allLeads.map((l: any) => l.id)
+
+  // 3. Fetch all contacts where lead_id is in leadIds
+  let contacts: any[] = []
+  if (leadIds.length > 0) {
+    const { data: contactsData, error: contactsErr } = await supabase
+      .from('contacts')
+      .select('id, first_name, last_name, email, phone, stakeholder_role, lead_id, account_id')
+      .in('lead_id', leadIds)
+    if (contactsErr) throw contactsErr
+    contacts = contactsData || []
   }
 
-  if (!data) return []
+  // 4. Fetch all activities where lead_id is in leadIds ordered by activity_date descending
+  let activities: any[] = []
+  if (leadIds.length > 0) {
+    const { data: activitiesData, error: activitiesErr } = await supabase
+      .from('lead_activities')
+      .select('id, activity_type, activity_date, note, lead_id')
+      .in('lead_id', leadIds)
+      .order('activity_date', { ascending: false })
+    if (activitiesErr) throw activitiesErr
+    activities = activitiesData || []
+  }
 
-  return data.map((account: any) => {
-    const rawLeads = account.leads || []
-    const contacts = account.contacts || []
+  // Map of leads by ID for fast lookup
+  const leadMap = new Map<string, any>()
+  allLeads.forEach((l: any) => leadMap.set(l.id, l))
 
-    const activeLeads = rawLeads.filter((l: any) => l.stage !== 'disqualified')
+  return accounts.map((account: any) => {
+    // Leads for this account
+    const accountLeads = allLeads.filter((l: any) => l.account_id === account.id)
+    const accountLeadIds = accountLeads.map((l: any) => l.id)
+
+    // Contacts for this account
+    const rawAccountContacts = contacts.filter((c: any) => c.account_id === account.id || (c.lead_id && accountLeadIds.includes(c.lead_id)))
+
+    // Deduplicate contacts by email address (case-insensitive, keeping first occurrence)
+    const seenEmails = new Set<string>()
+    const contactSummaries: ContactSummary[] = []
+    
+    rawAccountContacts.forEach((c: any) => {
+      const emailLower = c.email ? c.email.trim().toLowerCase() : ''
+      if (emailLower) {
+        if (!seenEmails.has(emailLower)) {
+          seenEmails.add(emailLower)
+          contactSummaries.push({
+            id: c.id,
+            first_name: c.first_name,
+            last_name: c.last_name,
+            email: c.email,
+            phone: c.phone,
+            stakeholder_role: c.stakeholder_role,
+            lead_id: c.lead_id
+          })
+        }
+      } else {
+        // If no email, always include
+        contactSummaries.push({
+          id: c.id,
+          first_name: c.first_name,
+          last_name: c.last_name,
+          email: c.email,
+          phone: c.phone,
+          stakeholder_role: c.stakeholder_role,
+          lead_id: c.lead_id
+        })
+      }
+    })
+
+    // Activities for this account (already ordered by activity_date desc globally/regionally)
+    const accountActivities = activities.filter((act: any) => act.lead_id && accountLeadIds.includes(act.lead_id))
+    
+    // Deduplicate activities by activity ID to be absolutely safe
+    const seenActivityIds = new Set<string>()
+    const recentActivities: ActivitySummary[] = []
+    
+    accountActivities.forEach((act: any) => {
+      if (!seenActivityIds.has(act.id)) {
+        seenActivityIds.add(act.id)
+        const lead = leadMap.get(act.lead_id)
+        recentActivities.push({
+          id: act.id,
+          activity_type: act.activity_type,
+          activity_date: act.activity_date,
+          note: act.note,
+          lead_id: act.lead_id,
+          opportunity_name: lead ? lead.opportunity_name : 'Unknown Opportunity'
+        })
+      }
+    })
+
+    // Sort recent activities descending
+    recentActivities.sort((a, b) => new Date(b.activity_date).getTime() - new Date(a.activity_date).getTime())
+
+    // Calculate metrics
+    const activeLeads = accountLeads.filter((l: any) => l.stage !== 'disqualified')
     const openLeadsCount = activeLeads.length
     const totalDealValue = activeLeads.reduce((sum: number, l: any) => sum + Number(l.deal_value || 0), 0)
 
     // Last activity days
     let minDays: number | null = null
-    rawLeads.forEach((l: any) => {
+    accountLeads.forEach((l: any) => {
       if (l.last_connect_date) {
         const days = calculateDaysSinceContact(l.last_connect_date)
         if (days !== null) {
@@ -153,14 +222,14 @@ export async function fetchAccountsWithMetrics(): Promise<AccountWithMetrics[]> 
       }
     })
 
-    const hasChampion = contacts.some((c: any) => c.stakeholder_role === 'champion')
-    const hasEconomicBuyer = contacts.some((c: any) => c.stakeholder_role === 'economic_buyer')
+    const hasChampion = contactSummaries.some((c: any) => c.stakeholder_role === 'champion')
+    const hasEconomicBuyer = contactSummaries.some((c: any) => c.stakeholder_role === 'economic_buyer')
 
     const hasLeadAtConnectedOrBeyond = activeLeads.some((l: any) =>
       ['connected', 'presentation', 'demo', 'evaluating'].includes(l.stage.toLowerCase())
     )
 
-    const leads: LeadSummary[] = rawLeads.map((l: any) => ({
+    const leads: LeadSummary[] = accountLeads.map((l: any) => ({
       id: l.id,
       opportunity_name: l.opportunity_name,
       stage: l.stage,
@@ -168,35 +237,6 @@ export async function fetchAccountsWithMetrics(): Promise<AccountWithMetrics[]> 
       deal_value: Number(l.deal_value || 0),
       forecast_close_date: l.forecast_close_date
     }))
-
-    const contactSummaries: ContactSummary[] = contacts.map((c: any) => ({
-      id: c.id,
-      first_name: c.first_name,
-      last_name: c.last_name,
-      email: c.email,
-      phone: c.phone,
-      stakeholder_role: c.stakeholder_role,
-      lead_id: c.lead_id
-    }))
-
-    // Recent activities chronologically merged
-    const recentActivities: ActivitySummary[] = []
-    rawLeads.forEach((l: any) => {
-      const activities = l.lead_activities || []
-      activities.forEach((act: any) => {
-        recentActivities.push({
-          id: act.id,
-          activity_type: act.activity_type,
-          activity_date: act.activity_date,
-          note: act.note,
-          lead_id: l.id,
-          opportunity_name: l.opportunity_name
-        })
-      })
-    })
-
-    // Sort activities descending
-    recentActivities.sort((a, b) => new Date(b.activity_date).getTime() - new Date(a.activity_date).getTime())
 
     return {
       id: account.id,
