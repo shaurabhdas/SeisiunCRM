@@ -10,6 +10,7 @@ export async function PUT(
     const { id } = await params
     const body = await request.json()
     const { toStage, ...options } = body
+    const lost_reason = options.lost_reason
 
     if (!toStage) {
       return NextResponse.json({ error: 'Missing toStage parameter' }, { status: 400 })
@@ -50,7 +51,7 @@ export async function PUT(
         if (!act.activity_date) return false
         // Compare dates (since activity_date is a DATE, compare midnight timestamps)
         const actTime = new Date(act.activity_date).getTime()
-        return actTime > proposalTime
+        return actTime >= proposalTime
       })
 
       if (!hasActivityAfterProposal) {
@@ -74,14 +75,18 @@ export async function PUT(
       }
     }
 
-    // Rule 3: Negotiation to Closed Lost
-    if (fromStage === 'negotiation' && toStage === 'closed_lost') {
-      const lostReason = options.lost_reason !== undefined ? options.lost_reason : deal.lost_reason
-      const allowedReasons = ['lost_to_competitor', 'budget_frozen', 'no_decision', 'scope_too_large', 'timing']
-
-      if (!lostReason || !allowedReasons.includes(lostReason)) {
+    // Rule 3: Any stage to Closed Lost
+    if (toStage === 'closed_lost') {
+      const validLostReasons = [
+        'lost_to_competitor',
+        'budget_frozen',
+        'no_decision',
+        'scope_too_large',
+        'timing'
+      ]
+      if (!lost_reason || !validLostReasons.includes(lost_reason)) {
         return NextResponse.json(
-          { error: 'A valid lost reason must be selected to close the deal as lost.' },
+          { error: 'A lost reason is required. Select one of: Lost to Competitor, Budget Frozen, No Decision, Scope Too Large, Timing.' },
           { status: 400 }
         )
       }

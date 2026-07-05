@@ -16,7 +16,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json()
-    const { opportunity_name, deal_type, reported_value, sales_region, account_id, accountName } = payload
+    let { opportunity_name, deal_type, reported_value, sales_region, account_id, accountName, originating_deal_id, proposal_date } = payload
 
     // Validate required fields
     if (!opportunity_name || !deal_type || reported_value === undefined || !sales_region) {
@@ -24,6 +24,10 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields: opportunity_name, deal_type, reported_value, sales_region' },
         { status: 400 }
       )
+    }
+
+    if (originating_deal_id && !proposal_date) {
+      proposal_date = new Date().toISOString().split('T')[0]
     }
 
     const { createClient } = require('@supabase/supabase-js')
@@ -58,7 +62,8 @@ export async function POST(request: NextRequest) {
 
     const newDeal = await createDeal({
       ...payload,
-      account_id: finalAccountId || null
+      account_id: finalAccountId || null,
+      proposal_date: proposal_date
     })
     return NextResponse.json(newDeal, { status: 201 })
   } catch (error) {
