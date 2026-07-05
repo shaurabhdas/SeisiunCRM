@@ -17,16 +17,20 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { name, industry, company_size, sales_region, notes } = body
 
+    const payload = {
+      id: randomUUID(),
+      name,
+      industry: industry || null,
+      company_size: company_size || null,
+      sales_region: sales_region || 'US East',
+      notes: notes || null
+    }
+
+    console.log("Supabase insert payload:", payload)
+
     const { data, error } = await supabase
       .from('accounts')
-      .insert({
-        id: randomUUID(),
-        name,
-        industry: industry || null,
-        company_size: company_size || null,
-        sales_region: sales_region || 'US East',
-        notes: notes || null
-      })
+      .insert(payload)
       .select()
       .single()
 
