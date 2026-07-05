@@ -25,7 +25,7 @@ import {
 } from "lucide-react"
 
 import { calculateAccountHealth, AccountHealthResult } from "@/lib/accountHealth"
-import { fetchAccountsWithMetrics, AccountWithMetrics, LeadSummary, ContactSummary, ActivitySummary, supabase } from "@/lib/accounts"
+import { fetchAccountsWithMetrics, AccountWithMetrics, LeadSummary, ContactSummary, ActivitySummary } from "@/lib/accounts"
 import { calculateDaysSinceContact, formatFollowUpDisplay, getFollowUpColorToken, formatDealValue } from "@/lib/followup"
 
 function AccountsPageContent() {
@@ -293,19 +293,19 @@ function AccountsPageContent() {
     if (!selectedAccountId || !newContactForm.firstName || !newContactForm.lastName || !newContactForm.leadId) return
 
     try {
-      const { error } = await supabase
-        .from('contacts')
-        .insert({
-          first_name: newContactForm.firstName,
-          last_name: newContactForm.lastName,
+      const res = await fetch(`/api/leads/${newContactForm.leadId}/contacts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: newContactForm.firstName,
+          lastName: newContactForm.lastName,
           email: newContactForm.email || null,
           phone: newContactForm.phone || null,
-          stakeholder_role: newContactForm.stakeholderRole || null,
-          lead_id: newContactForm.leadId,
-          account_id: selectedAccountId
+          stakeholderRole: newContactForm.stakeholderRole || null
         })
+      })
 
-      if (error) throw error
+      if (!res.ok) throw new Error("Failed to create contact")
 
       await loadAccountsData(true)
       setIsAddingContact(false)
