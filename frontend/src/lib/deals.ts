@@ -20,6 +20,9 @@ export type Deal = {
   sales_region: string | null
   competitor: string | null
   notes: string | null
+  needs_reassignment?: boolean | null
+  assigned_rep_id?: string | null
+  assigned_rep_name?: string | null
   created_at: string
   account?: { name: string; industry: string | null }
   lead?: { opportunity_name: string; stage: string }

@@ -19,6 +19,8 @@ function camelCaseLead(lead: any) {
     competitor: lead.competitor,
     lastConnectDate: lead.last_connect_date,
     assignedRepId: lead.assigned_rep_id,
+    assignedRepName: lead.assigned_rep_name,
+    needsReassignment: lead.needs_reassignment,
     disqualificationReason: lead.disqualification_reason,
     postDemoOutcome: lead.post_demo_outcome,
     dealValue: lead.deal_value,
@@ -78,7 +80,10 @@ export async function PUT(
       salesRegion,
       industry,
       companySize,
-      dealValue
+      dealValue,
+      assignedRepId,
+      assignedRepName,
+      needsReassignment
     } = body
 
     const { data: lead, error: fetchErr } = await supabase
@@ -96,7 +101,10 @@ export async function PUT(
         forecast_close_date: forecastCloseDate !== undefined ? (forecastCloseDate || null) : lead.forecast_close_date,
         competitor: competitor !== undefined ? competitor : lead.competitor,
         pain_points: painPoints !== undefined ? painPoints : lead.pain_points,
-        deal_value: dealValue !== undefined ? (dealValue !== null ? Number(dealValue) : 0) : lead.deal_value
+        deal_value: dealValue !== undefined ? (dealValue !== null ? Number(dealValue) : 0) : lead.deal_value,
+        assigned_rep_id: assignedRepId !== undefined ? (assignedRepId || null) : lead.assigned_rep_id,
+        assigned_rep_name: assignedRepName !== undefined ? (assignedRepName || null) : lead.assigned_rep_name,
+        needs_reassignment: needsReassignment !== undefined ? needsReassignment : lead.needs_reassignment
       })
       .eq('id', id)
       .select()

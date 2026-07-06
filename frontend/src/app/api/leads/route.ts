@@ -19,6 +19,8 @@ function camelCaseLead(lead: any) {
     competitor: lead.competitor,
     lastConnectDate: lead.last_connect_date,
     assignedRepId: lead.assigned_rep_id,
+    assignedRepName: lead.assigned_rep_name,
+    needsReassignment: lead.needs_reassignment,
     disqualificationReason: lead.disqualification_reason,
     postDemoOutcome: lead.post_demo_outcome,
     dealValue: lead.deal_value,

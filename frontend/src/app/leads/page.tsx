@@ -20,6 +20,7 @@ import {
   Filter,
   Check,
   ChevronRight,
+  ChevronDown,
   Info,
   Clock,
   Briefcase,
@@ -28,6 +29,7 @@ import {
   MoreVertical
 } from "lucide-react"
 
+import { createClient } from "@/lib/supabase/client"
 import { useSearchParams, useRouter } from "next/navigation"
 
 import {
@@ -89,6 +91,9 @@ interface Lead {
   lastConnectDate: string | null
   disqualificationReason: string | null
   postDemoOutcome: string | null
+  needsReassignment?: boolean | null
+  assignedRepId?: string | null
+  assignedRepName?: string | null
   createdAt: string
   contacts: Contact[]
   activities: Activity[]
@@ -99,6 +104,11 @@ function LeadsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlLeadId = searchParams.get('lead')
+  const supabase = createClient()
+  const [userProfile, setUserProfile] = React.useState<any>(null)
+  const [activeReps, setActiveReps] = React.useState<any[]>([])
+  const [reassignmentOpen, setReassignmentOpen] = React.useState(true)
+  const [assigningLeadId, setAssigningLeadId] = React.useState<string | null>(null)
 
   const [leads, setLeads] = React.useState<Lead[]>([])
   const [regions, setRegions] = React.useState<string[]>([])
@@ -189,7 +199,51 @@ function LeadsPageContent() {
     fetchLeads()
     fetchRegions()
     fetchAccounts()
+    
+    const fetchProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role, status')
+          .eq('id', user.id)
+          .single()
+        setUserProfile(profile)
+        
+        if (profile && (profile.role === 'super_admin' || profile.role === 'manager')) {
+          const { data: reps } = await supabase
+            .from('user_profiles')
+            .select('id, full_name, email')
+            .eq('status', 'active')
+            .eq('role', 'rep')
+          setActiveReps(reps || [])
+        }
+      }
+    }
+    fetchProfile()
   }, [])
+
+  const handleAssignLeadToRep = async (leadId: string, repId: string, repName: string) => {
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignedRepId: repId,
+          assignedRepName: repName,
+          needsReassignment: false
+        })
+      })
+      if (res.ok) {
+        setAssigningLeadId(null)
+        await fetchLeads()
+      } else {
+        alert("Failed to assign lead to rep")
+      }
+    } catch (err) {
+      console.error("Error assigning lead to rep:", err)
+    }
+  }
 
   // 1. Sync urlLeadId changes to selectedLeadId state
   React.useEffect(() => {
@@ -820,6 +874,90 @@ function LeadsPageContent() {
               <p className="mt-1 text-2xs text-muted-foreground">Velocity tracking index</p>
             </Card>
           </div>
+
+          {/* NEEDS REASSIGNMENT section */}
+          {userProfile && (userProfile.role === 'super_admin' || userProfile.role === 'manager') && leads.some(l => l.needsReassignment) && (
+            <div className="mx-4 lg:mx-6 mb-4 rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
+              <div className="flex items-center justify-between cursor-pointer" onClick={() => setReassignmentOpen(!reassignmentOpen)}>
+                <div className="flex items-center gap-2 text-amber-800 font-semibold">
+                  <AlertTriangle className="size-5 text-amber-600 animate-pulse" />
+                  <span>NEEDS REASSIGNMENT</span>
+                  <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs text-amber-800">
+                    {leads.filter(l => l.needsReassignment).length}
+                  </span>
+                </div>
+                <div className="text-amber-700 hover:text-amber-900 transition-colors">
+                  {reassignmentOpen ? (
+                    <ChevronDown className="size-4" />
+                  ) : (
+                    <ChevronRight className="size-4" />
+                  )}
+                </div>
+              </div>
+
+              {reassignmentOpen && (
+                <div className="mt-3 divide-y divide-amber-100 overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="text-xs font-semibold uppercase tracking-wider text-amber-700 bg-amber-100/30">
+                        <th className="p-3">Opportunity Name</th>
+                        <th className="p-3">Account</th>
+                        <th className="p-3">Stage</th>
+                        <th className="p-3">Deal Value</th>
+                        <th className="p-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-100 bg-white/70">
+                      {leads
+                        .filter(l => l.needsReassignment)
+                        .map(lead => (
+                          <tr key={lead.id} className="hover:bg-amber-50/20">
+                            <td className="p-3 font-medium text-amber-900">{lead.opportunityName}</td>
+                            <td className="p-3 text-amber-800">{lead.account?.name || "Unassigned"}</td>
+                            <td className="p-3">
+                              <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                                {lead.stage}
+                              </span>
+                            </td>
+                            <td className="p-3 text-amber-900 font-medium">{formatDealValue(lead.dealValue)}</td>
+                            <td className="p-3 text-right relative">
+                              <div className="inline-block text-left">
+                                <button
+                                  onClick={() => setAssigningLeadId(assigningLeadId === lead.id ? null : lead.id)}
+                                  className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 text-white hover:bg-amber-700 px-3 py-1.5 text-xs font-medium transition-colors shadow-sm cursor-pointer"
+                                >
+                                  Assign to Rep
+                                  <ChevronDown className="size-3" />
+                                </button>
+                                {assigningLeadId === lead.id && (
+                                  <div className="absolute right-3 mt-1 w-56 rounded-md bg-white shadow-lg ring-1 ring-black/5 z-50 divide-y divide-neutral-100 max-h-60 overflow-y-auto">
+                                    <div className="py-1">
+                                      {activeReps.length === 0 ? (
+                                        <div className="px-4 py-2 text-xs text-muted-foreground">No active reps available</div>
+                                      ) : (
+                                        activeReps.map(rep => (
+                                          <button
+                                            key={rep.id}
+                                            onClick={() => handleAssignLeadToRep(lead.id, rep.id, rep.full_name || rep.email)}
+                                            className="w-full text-left px-4 py-2 text-xs text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                                          >
+                                            {rep.full_name || rep.email}
+                                          </button>
+                                        ))
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* MAIN ZONE B / C Wrapper */}
           <div className="flex flex-1 gap-5 px-4 lg:px-6 overflow-hidden min-h-0">

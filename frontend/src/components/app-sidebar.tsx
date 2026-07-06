@@ -158,10 +158,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: "Settings",
       icon: Settings,
       collapsible: true,
-      subItems: [
-        { name: "Workspace", url: "#" },
-        { name: "Team", url: "#" }
-      ],
+      subItems: profile?.role === 'super_admin'
+        ? [{ name: "User Management", url: "/settings/users" }]
+        : [{ name: "Profile", url: "/settings/profile" }],
     },
   ]
 
@@ -208,7 +207,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {item.collapsible ? (
                     <div className="flex flex-col w-full">
                       {(() => {
-                        const href = item.title === "Dashboard" ? "/dashboard" : item.title === "Deals" ? "/deals/pipeline" : undefined
+                        const href = item.title === "Dashboard" 
+                          ? "/dashboard" 
+                          : item.title === "Deals" 
+                          ? "/deals/pipeline" 
+                          : item.title === "Settings"
+                          ? (profile?.role === 'super_admin' ? "/settings/users" : "/settings/profile")
+                          : undefined
                         const content = (
                           <>
                             <Icon className="size-4 shrink-0" />
