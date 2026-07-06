@@ -900,4 +900,66 @@ describe('Deals stage gate validation', () => {
   })
 })
 
+describe('Auth schema verification', () => {
+
+  it('user_profiles table exists in test schema with correct columns', async () => {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('id, email, role, status')
+      .limit(0)
+
+    expect(error).toBeNull()
+  })
+
+  it('leads table has needs_reassignment and assigned_rep_name columns', async () => {
+    const today = new Date().toISOString().split('T')[0]
+
+    const { data: lead, error } = await supabase
+      .from('leads')
+      .insert({
+        opportunity_name: 'Auth Schema Test Lead',
+        account_id: testAccountId,
+        stage: 'contact',
+        open_date: today,
+        forecast_close_date: '2026-12-31',
+        sales_region: 'US East',
+        needs_reassignment: false,
+        assigned_rep_name: 'Test Rep',
+      })
+      .select('needs_reassignment, assigned_rep_name')
+      .single()
+
+    expect(error).toBeNull()
+    expect(lead.needs_reassignment).toBe(false)
+    expect(lead.assigned_rep_name).toBe('Test Rep')
+
+    await supabase.from('leads').delete().eq('opportunity_name', 'Auth Schema Test Lead')
+  })
+
+  it('deals table has needs_reassignment and assigned_rep_name columns', async () => {
+    const { data: deal, error } = await supabase
+      .from('deals')
+      .insert({
+        account_id: testAccountId,
+        opportunity_name: 'Auth Schema Test Deal',
+        deal_type: 'poc',
+        reported_value: 60000,
+        value_confidence: 'estimated',
+        stage: 'proposal_submitted',
+        sales_region: 'US East',
+        needs_reassignment: false,
+        assigned_rep_name: 'Test Rep',
+      })
+      .select('needs_reassignment, assigned_rep_name')
+      .single()
+
+    expect(error).toBeNull()
+    expect(deal.needs_reassignment).toBe(false)
+    expect(deal.assigned_rep_name).toBe('Test Rep')
+
+    await supabase.from('deal_stage_history').delete().eq('deal_id', deal.id)
+    await supabase.from('deals').delete().eq('id', deal.id)
+  })
+})
+
 
