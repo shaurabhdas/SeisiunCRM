@@ -238,6 +238,7 @@ function PipelinePageContent() {
 
   // Sync selectedDealId back to URL
   React.useEffect(() => {
+    if (loading) return
     const currentDeal = searchParams.get('deal')
     if (selectedDealId) {
       if (currentDeal !== selectedDealId) {
@@ -248,7 +249,7 @@ function PipelinePageContent() {
         router.replace('/deals/pipeline')
       }
     }
-  }, [selectedDealId, router, searchParams])
+  }, [selectedDealId, router, searchParams, loading])
 
   const loadData = async () => {
     setLoading(true)

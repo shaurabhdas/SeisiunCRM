@@ -263,6 +263,7 @@ function LeadsPageContent() {
 
   // 2. Sync selectedLeadId state changes back to URL
   React.useEffect(() => {
+    if (loading) return
     const currentLead = searchParams.get('lead')
     if (selectedLeadId) {
       if (currentLead !== selectedLeadId) {
@@ -273,7 +274,7 @@ function LeadsPageContent() {
         router.replace('/leads')
       }
     }
-  }, [selectedLeadId, router, searchParams])
+  }, [selectedLeadId, router, searchParams, loading])
 
   const fetchLeads = async () => {
     try {
