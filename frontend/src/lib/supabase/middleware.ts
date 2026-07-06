@@ -4,6 +4,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
+  console.log("MIDDLEWARE RUN:", request.nextUrl.pathname, "SCHEMA HEADER:", request.headers.get('x-supabase-schema'))
+
   // Bypass middleware for integration tests targeting test schema
   if (request.headers.get('x-supabase-schema') === 'test') {
     return supabaseResponse
