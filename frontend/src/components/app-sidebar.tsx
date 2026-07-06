@@ -3,6 +3,8 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
+import { signOut } from "@/app/login/actions"
 import {
   Sidebar,
   SidebarContent,
@@ -55,6 +57,39 @@ import {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter()
+  const supabase = createClient()
+  const [profile, setProfile] = React.useState<any>(null)
+  const [user, setUser] = React.useState<any>(null)
+
+  React.useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setUser(user)
+        const { data } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        if (data) {
+          setProfile(data)
+        }
+      }
+    }
+    fetchUser()
+  }, [])
+
+  const displayName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User"
+  const displayEmail = profile?.email || user?.email || ""
+  const displayInitials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .map((n: string) => n[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase()
+  const displayAvatar = profile?.avatar_url || ""
+
   const [openItems, setOpenItems] = React.useState<Record<string, boolean>>({
     Dashboard: true,
     Deals: true,
@@ -258,12 +293,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 render={
                   <SidebarMenuButton size="lg" className="w-full hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent">
                     <Avatar className="size-8 rounded-full">
-                      <AvatarImage src="" alt="Avery Jones" />
-                      <AvatarFallback className="rounded-full bg-sidebar-primary text-sidebar-primary-foreground font-semibold text-xs">AJ</AvatarFallback>
+                      <AvatarImage src={displayAvatar} alt={displayName} />
+                      <AvatarFallback className="rounded-full bg-sidebar-primary text-sidebar-primary-foreground font-semibold text-xs">{displayInitials}</AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-medium text-foreground">Avery Jones</span>
-                      <span className="truncate text-xs text-muted-foreground">avery@pulsecrm.ai</span>
+                      <span className="truncate font-medium text-foreground">{displayName}</span>
+                      <span className="truncate text-xs text-muted-foreground">{displayEmail}</span>
                     </div>
                     <ChevronsUpDown className="ml-auto size-4 text-muted-foreground/75" />
                   </SidebarMenuButton>
@@ -272,11 +307,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <DropdownMenuContent className="w-56" align="start" side="top" sideOffset={8}>
                 <div className="flex items-center gap-2 p-2">
                   <Avatar className="size-8">
-                    <AvatarFallback className="rounded-full bg-sidebar-primary text-sidebar-primary-foreground font-semibold text-xs">AJ</AvatarFallback>
+                    <AvatarImage src={displayAvatar} alt={displayName} />
+                    <AvatarFallback className="rounded-full bg-sidebar-primary text-sidebar-primary-foreground font-semibold text-xs">{displayInitials}</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col space-y-0.5 text-left text-sm">
-                    <span className="font-medium">Avery Jones</span>
-                    <span className="text-xs text-muted-foreground">avery@pulsecrm.ai</span>
+                    <span className="font-medium">{displayName}</span>
+                    <span className="text-xs text-muted-foreground">{displayEmail}</span>
                   </div>
                 </div>
                 <DropdownMenuSeparator />
@@ -293,7 +329,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   Notifications
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOut()}>
                   <LogOut className="size-4 mr-2" />
                   Log out
                 </DropdownMenuItem>
