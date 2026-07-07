@@ -35,12 +35,31 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   // Public routes that do not require authentication
-  const publicRoutes = ['/login', '/auth/callback', '/set-password']
+  const publicRoutes = ['/login', '/auth/callback', '/set-password', '/setup']
   const isPublicRoute = publicRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)
   )
 
   if (!user && !isPublicRoute) {
+    try {
+      const setupCheckResponse = await fetch(
+        `${request.nextUrl.origin}/api/setup`,
+        { headers: { 'Cookie': request.headers.get('cookie') || '' } }
+      )
+      const setupData = await setupCheckResponse.json()
+
+      if (setupData.setupRequired) {
+        if (request.nextUrl.pathname !== '/setup') {
+          const url = request.nextUrl.clone()
+          url.pathname = '/setup'
+          return NextResponse.redirect(url)
+        }
+        return supabaseResponse
+      }
+    } catch {
+      // If setup check fails, fall through to normal login redirect
+    }
+
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
