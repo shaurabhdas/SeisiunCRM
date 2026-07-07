@@ -48,7 +48,10 @@ export function TeamLeaderboard({ timeframe }: { timeframe: string }) {
   }
 
   const sortedData = React.useMemo(() => {
-    return [...data].sort((a, b) => {
+    const reps = data.filter(r => r.name !== 'Unattributed')
+    const unattributed = data.find(r => r.name === 'Unattributed')
+
+    reps.sort((a, b) => {
       const aVal = a[sortField]
       const bVal = b[sortField]
       
@@ -62,6 +65,8 @@ export function TeamLeaderboard({ timeframe }: { timeframe: string }) {
       
       return 0
     })
+
+    return unattributed ? [...reps, unattributed] : reps
   }, [data, sortField, sortAsc])
 
   const renderSortIndicator = (field: keyof RepRow) => {
@@ -142,39 +147,41 @@ export function TeamLeaderboard({ timeframe }: { timeframe: string }) {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {sortedData.map((rep) => (
-              <tr
-                key={rep.name}
-                className="hover:bg-muted/30 transition-colors group cursor-default"
-              >
-                <td className="py-3 px-2 font-medium text-foreground flex items-center gap-2.5">
-                  <Avatar className="size-6 text-[10px]">
-                    <AvatarFallback className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 font-semibold border">
-                      {rep.initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span>{rep.name}</span>
-                </td>
-                <td className="py-3 px-2 text-right text-muted-foreground tabular-nums">
-                  {rep.emails.toLocaleString()}
-                </td>
-                <td className="py-3 px-2 text-right text-muted-foreground tabular-nums">
-                  {rep.calls.toLocaleString()}
-                </td>
-                <td className="py-3 px-2 text-right text-muted-foreground tabular-nums">
-                  {rep.meetings}
-                </td>
-                <td className="py-3 px-2 text-right font-bold text-foreground tabular-nums">
-                  {rep.score.toLocaleString()}
-                </td>
-              </tr>
-            ))}
+             {sortedData.map((rep) => {
+              const isUnattributed = rep.name === 'Unattributed'
+              return (
+                <tr
+                  key={rep.name}
+                  className={`hover:bg-muted/30 transition-colors group cursor-default ${
+                    isUnattributed ? 'opacity-60 italic text-muted-foreground/80' : ''
+                  }`}
+                >
+                  <td className="py-3 px-2 font-medium text-foreground flex items-center gap-2.5">
+                    <Avatar className="size-6 text-[10px]">
+                      <AvatarFallback className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 font-semibold border">
+                        {rep.initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>{rep.name}</span>
+                  </td>
+                  <td className="py-3 px-2 text-right text-muted-foreground tabular-nums">
+                    {rep.emails.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-2 text-right text-muted-foreground tabular-nums">
+                    {rep.calls.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-2 text-right text-muted-foreground tabular-nums">
+                    {rep.meetings}
+                  </td>
+                  <td className="py-3 px-2 text-right font-bold text-foreground tabular-nums">
+                    {rep.score.toLocaleString()}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-[11px] text-muted-foreground/60 italic">
-        Rep-level breakdown available after authentication is enabled.
-      </p>
     </div>
   )
 }

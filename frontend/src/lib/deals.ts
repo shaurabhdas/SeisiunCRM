@@ -147,7 +147,8 @@ export async function createDeal(payload: Partial<Deal>): Promise<Deal> {
     .insert({
       deal_id: deal.id,
       from_stage: null,
-      to_stage: deal.stage
+      to_stage: deal.stage,
+      changed_by: payload.assigned_rep_id || null
     })
   if (histErr) throw histErr
 
@@ -171,7 +172,8 @@ export async function updateDealStage(
     on_hold_resume_date?: string | null
     close_date?: string | null
     sow_reference?: string | null
-  } = {}
+  } = {},
+  changedBy?: string | null
 ): Promise<{ deal: Deal; showConversionPrompt: boolean }> {
   // Get current deal stage
   const { data: currentDeal, error: getErr } = await supabase
@@ -208,7 +210,8 @@ export async function updateDealStage(
     .insert({
       deal_id: dealId,
       from_stage: fromStage,
-      to_stage: newStage
+      to_stage: newStage,
+      changed_by: changedBy || null
     })
   if (histErr) throw histErr
 
@@ -224,7 +227,8 @@ export async function logDealActivity(
   dealId: string,
   activityType: string,
   activityDate: string,
-  note: string | null
+  note: string | null,
+  loggedBy?: string | null
 ): Promise<DealActivity> {
   const { data: activity, error } = await supabase
     .from('deal_activities')
@@ -232,7 +236,8 @@ export async function logDealActivity(
       deal_id: dealId,
       activity_type: activityType,
       activity_date: activityDate,
-      note
+      note,
+      logged_by: loggedBy || null
     })
     .select()
     .single()

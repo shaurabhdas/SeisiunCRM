@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, schemaStorage } from '@/lib/accounts'
 import { updateDealStage } from '@/lib/deals'
+import { requireAuth } from '@/lib/auth'
 
 export async function PUT(
   request: NextRequest,
@@ -9,6 +10,7 @@ export async function PUT(
   const schema = request.headers.get('x-supabase-schema') || 'public'
   return schemaStorage.run(schema, async () => {
     try {
+      const authUser = await requireAuth()
       const { id } = await params
       const body = await request.json()
       const { toStage, ...options } = body
@@ -112,7 +114,7 @@ export async function PUT(
       }
 
       // Progression rules passed. Update the stage.
-      const result = await updateDealStage(id, toStage, options)
+      const result = await updateDealStage(id, toStage, options, authUser.id)
       return NextResponse.json({
         ...result.deal,
         deal: result.deal,

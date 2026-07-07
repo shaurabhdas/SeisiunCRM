@@ -1076,18 +1076,25 @@ function LeadsPageContent() {
                               <p className="text-2xs text-muted-foreground mt-1">{lead.account?.name || 'No account linked'}</p>
                             </td>
                             <td className="p-3 text-xs">
-                              {primaryContact ? (
-                                <div className="flex items-center gap-1.5">
-                                  <span>{primaryContact.firstName} {primaryContact.lastName}</span>
-                                  {additionalContacts > 0 && (
-                                    <span className="rounded bg-neutral-200 px-1 py-0.5 text-3xs font-semibold text-neutral-600">
-                                      +{additionalContacts}
-                                    </span>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-(--muted-foreground) text-xs font-normal">No contacts</span>
-                              )}
+                              <div>
+                                {primaryContact ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <span>{primaryContact.firstName} {primaryContact.lastName}</span>
+                                    {additionalContacts > 0 && (
+                                      <span className="rounded bg-neutral-200 px-1 py-0.5 text-3xs font-semibold text-neutral-600">
+                                        +{additionalContacts}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-(--muted-foreground) text-xs font-normal">No contacts</span>
+                                )}
+                                {lead.assignedRepName && (
+                                  <p className="text-3xs text-muted-foreground mt-0.5 font-normal">
+                                    Rep: {lead.assignedRepName}
+                                  </p>
+                                )}
+                              </div>
                             </td>
                             <td className="p-3">
                               <span className={getStageBadgeClasses(lead.stage)}>
@@ -1458,10 +1465,75 @@ function LeadsPageContent() {
                           <p className="mt-0.5 text-foreground">{selectedLead.competitor || <span className="text-muted-foreground/50">None tracked</span>}</p>
                         </div>
 
+
                         {/* Pain Points */}
                         <div className="col-span-2 border-t pt-2 mt-2">
                           <p className="text-3xs font-bold uppercase text-muted-foreground">Pain Points</p>
                           <p className="mt-1 text-foreground leading-normal whitespace-pre-line">{selectedLead.painPoints || <span className="text-muted-foreground/50">None logged</span>}</p>
+                        </div>
+
+                        {/* Assigned Rep */}
+                        <div className="border-t pt-2 mt-2">
+                          <p className="text-3xs font-bold uppercase text-muted-foreground">Assigned Rep</p>
+                          <div className="mt-0.5 text-foreground flex items-center justify-between gap-2 relative">
+                            <span>
+                              {selectedLead.assignedRepName ? (
+                                selectedLead.assignedRepName
+                              ) : (
+                                <span className="text-muted-foreground italic font-normal">Unassigned</span>
+                              )}
+                            </span>
+                            
+                            {userProfile && (userProfile.role === 'super_admin' || userProfile.role === 'manager') && (
+                              <div className="inline-block text-left">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setAssigningLeadId(assigningLeadId === selectedLead.id ? null : selectedLead.id);
+                                  }}
+                                  className="text-3xs font-semibold text-(--primary) hover:underline flex items-center gap-0.5"
+                                >
+                                  Reassign
+                                  <ChevronDown className="size-2.5" />
+                                </button>
+                                {assigningLeadId === selectedLead.id && (
+                                  <div className="absolute right-0 mt-1 w-48 rounded-md bg-white shadow-lg ring-1 ring-black/5 z-50 divide-y divide-neutral-100 max-h-48 overflow-y-auto">
+                                    <div className="py-1">
+                                      {activeReps.length === 0 ? (
+                                        <div className="px-4 py-2 text-xs text-muted-foreground">No active reps</div>
+                                      ) : (
+                                        activeReps.map(rep => (
+                                          <button
+                                            key={rep.id}
+                                            type="button"
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              await handleAssignLeadToRep(selectedLead.id, rep.id, rep.full_name || rep.email);
+                                              setAssigningLeadId(null);
+                                            }}
+                                            className="w-full text-left px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-100 transition-colors"
+                                          >
+                                            {rep.full_name || rep.email}
+                                          </button>
+                                        ))
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Created */}
+                        <div className="border-t pt-2 mt-2">
+                          <p className="text-3xs font-bold uppercase text-muted-foreground">Created</p>
+                          <p className="mt-0.5 text-foreground">
+                            {selectedLead.createdAt ? new Date(selectedLead.createdAt).toLocaleDateString('en-US', {
+                              year: 'numeric', month: 'short', day: 'numeric'
+                            }) : "-"}
+                          </p>
                         </div>
 
                       </div>

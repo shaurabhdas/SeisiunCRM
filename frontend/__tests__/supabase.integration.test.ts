@@ -962,4 +962,130 @@ describe('Auth schema verification', () => {
   })
 })
 
+describe('Tasks schema and operations', () => {
 
+  let testTaskId: string
+
+  afterAll(async () => {
+    if (testTaskId) {
+      await supabase.from('tasks').delete().eq('id', testTaskId)
+    }
+  })
+
+  it('creates a task with correct defaults', async () => {
+    const today = new Date().toISOString().split('T')[0]
+
+    const { data: task, error } = await supabase
+      .from('tasks')
+      .insert({
+        title: 'Test Task',
+        description: 'Test task description',
+        priority: 'high',
+        due_date: today,
+        assigned_to_name: 'Test Rep',
+        created_by_name: 'Test Manager',
+      })
+      .select()
+      .single()
+
+    expect(error).toBeNull()
+    expect(task.status).toBe('open')
+    expect(task.priority).toBe('high')
+    expect(task.completed_at).toBeNull()
+
+    testTaskId = task.id
+  })
+
+  it('updates task status to complete and sets completed_at', async () => {
+    const { data: task, error } = await supabase
+      .from('tasks')
+      .update({
+        status: 'complete',
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', testTaskId)
+      .select()
+      .single()
+
+    expect(error).toBeNull()
+    expect(task.status).toBe('complete')
+    expect(task.completed_at).toBeTruthy()
+  })
+
+  it('links a task to a lead', async () => {
+    const today = new Date().toISOString().split('T')[0]
+
+    const { data: lead } = await supabase
+      .from('leads')
+      .insert({
+        opportunity_name: 'Task Link Test Lead',
+        account_id: testAccountId,
+        stage: 'contact',
+        open_date: today,
+        forecast_close_date: '2026-12-31',
+        sales_region: 'US East',
+      })
+      .select()
+      .single()
+
+    const { data: task, error } = await supabase
+      .from('tasks')
+      .insert({
+        title: 'Follow up on Task Link Test Lead',
+        priority: 'medium',
+        lead_id: lead.id,
+      })
+      .select()
+      .single()
+
+    expect(error).toBeNull()
+    expect(task.lead_id).toBe(lead.id)
+
+    await supabase.from('tasks').delete().eq('id', task.id)
+    await supabase.from('lead_stage_history').delete().eq('lead_id', lead.id)
+    await supabase.from('leads').delete().eq('id', lead.id)
+  })
+
+  it('rejects invalid priority value', async () => {
+    const { error } = await supabase
+      .from('tasks')
+      .insert({
+        title: 'Invalid Priority Task',
+        priority: 'critical',
+      })
+
+    expect(error).toBeTruthy()
+  })
+
+  it('rejects invalid status value', async () => {
+    const { error } = await supabase
+      .from('tasks')
+      .insert({
+        title: 'Invalid Status Task',
+        status: 'cancelled',
+      })
+
+    expect(error).toBeTruthy()
+  })
+
+  it('deletes a task cleanly', async () => {
+    const { data: task } = await supabase
+      .from('tasks')
+      .insert({
+        title: 'Delete Test Task',
+        priority: 'low',
+      })
+      .select()
+      .single()
+
+    await supabase.from('tasks').delete().eq('id', task.id)
+
+    const { data: check } = await supabase
+      .from('tasks')
+      .select()
+      .eq('id', task.id)
+
+    expect(check.length).toBe(0)
+  })
+})

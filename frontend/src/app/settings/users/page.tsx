@@ -27,6 +27,7 @@ export default function UserManagementPage() {
   const [roleModalOpen, setRoleModalOpen] = React.useState(false)
   const [revokeModalOpen, setRevokeModalOpen] = React.useState(false)
   const [restoreModalOpen, setRestoreModalOpen] = React.useState(false)
+  const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
 
   // Selected user for action
   const [selectedUser, setSelectedUser] = React.useState<UserProfile | null>(null)
@@ -168,6 +169,29 @@ export default function UserManagementPage() {
         await fetchUsers()
       } else {
         setErrorMessage(result.error || "Failed to restore access")
+      }
+    } catch (err) {
+      setErrorMessage("An unexpected error occurred.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedUser) return
+    setErrorMessage("")
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(`/api/users/${selectedUser.id}`, {
+        method: "DELETE",
+      })
+      const result = await res.json()
+      if (res.ok) {
+        setDeleteModalOpen(false)
+        setSelectedUser(null)
+        await fetchUsers()
+      } else {
+        setErrorMessage(result.error || "Failed to delete user")
       }
     } catch (err) {
       setErrorMessage("An unexpected error occurred.")
@@ -367,32 +391,66 @@ export default function UserManagementPage() {
                                       >
                                         Revoke Access
                                       </button>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedUser(profile)
+                                          setErrorMessage("")
+                                          setDeleteModalOpen(true)
+                                        }}
+                                        className="rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer"
+                                      >
+                                        Delete User
+                                      </button>
                                     </>
                                   )}
                                   {profile.status === "pending" && (
-                                    <button
-                                      onClick={() => {
-                                        setSelectedUser(profile)
-                                        setSelectedRole("rep")
-                                        setErrorMessage("")
-                                        setRoleModalOpen(true)
-                                      }}
-                                      className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer shadow-sm"
-                                    >
-                                      Assign Role
-                                    </button>
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedUser(profile)
+                                          setSelectedRole("rep")
+                                          setErrorMessage("")
+                                          setRoleModalOpen(true)
+                                        }}
+                                        className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer shadow-sm"
+                                      >
+                                        Assign Role
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedUser(profile)
+                                          setErrorMessage("")
+                                          setDeleteModalOpen(true)
+                                        }}
+                                        className="rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer"
+                                      >
+                                        Delete User
+                                      </button>
+                                    </>
                                   )}
                                   {profile.status === "revoked" && (
-                                    <button
-                                      onClick={() => {
-                                        setSelectedUser(profile)
-                                        setErrorMessage("")
-                                        setRestoreModalOpen(true)
-                                      }}
-                                      className="rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer"
-                                    >
-                                      Restore Access
-                                    </button>
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedUser(profile)
+                                          setErrorMessage("")
+                                          setRestoreModalOpen(true)
+                                        }}
+                                        className="rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer"
+                                      >
+                                        Restore Access
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedUser(profile)
+                                          setErrorMessage("")
+                                          setDeleteModalOpen(true)
+                                        }}
+                                        className="rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer"
+                                      >
+                                        Delete User
+                                      </button>
+                                    </>
                                   )}
                                 </div>
                               )}
@@ -658,6 +716,53 @@ export default function UserManagementPage() {
                   className="rounded-md bg-emerald-600 text-white hover:bg-emerald-700 px-4 py-2 text-sm font-medium transition-colors shadow-sm cursor-pointer disabled:opacity-50"
                 >
                   {isSubmitting ? "Restoring..." : "Restore Access"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Confirmation Modal */}
+      {deleteModalOpen && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-[440px] rounded-xl border border-border bg-card p-6 shadow-lg space-y-4">
+            <div className="flex items-center gap-3 border-b border-border pb-3 text-destructive">
+              <ShieldAlert className="size-5 shrink-0" />
+              <h2 className="text-lg font-semibold">
+                Delete user {selectedUser.full_name || selectedUser.email}?
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Are you sure you want to delete this user? This action is permanent and cannot be undone. All references to this user on active leads, deals, and activities will be cleared.
+              </p>
+
+              {errorMessage && (
+                <div className="text-sm text-destructive font-medium bg-red-50 border border-red-100 rounded-md p-2">
+                  {errorMessage}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteModalOpen(false)
+                    setSelectedUser(null)
+                  }}
+                  className="rounded-md border border-input bg-background hover:bg-muted px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteConfirm}
+                  disabled={isSubmitting}
+                  className="rounded-md bg-red-600 text-white hover:bg-red-700 px-4 py-2 text-sm font-medium transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? "Deleting..." : "Delete User"}
                 </button>
               </div>
             </div>

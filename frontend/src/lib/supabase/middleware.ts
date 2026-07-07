@@ -35,7 +35,7 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   // Public routes that do not require authentication
-  const publicRoutes = ['/login', '/auth/callback']
+  const publicRoutes = ['/login', '/auth/callback', '/set-password']
   const isPublicRoute = publicRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)
   )
@@ -50,7 +50,7 @@ export async function updateSession(request: NextRequest) {
     // Check user profile status
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('role, status')
+      .select('role, status, password_set')
       .eq('id', user.id)
       .single()
 
@@ -69,6 +69,13 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone()
       url.pathname = '/login'
       url.searchParams.set('error', 'access_revoked')
+      return NextResponse.redirect(url)
+    }
+
+    // If password is not set, force redirect to set-password
+    if (profile && profile.status === 'active' && !profile.password_set && request.nextUrl.pathname !== '/set-password') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/set-password'
       return NextResponse.redirect(url)
     }
   }

@@ -810,6 +810,11 @@ function PipelinePageContent() {
                           >
                             <p className="text-sm font-bold text-foreground leading-snug break-words">{deal.opportunity_name}</p>
                             <p className="text-xs text-muted-foreground mt-1 truncate">{deal.account?.name || "No Account"}</p>
+                            {deal.assigned_rep_name && (
+                               <p className="text-[10px] text-muted-foreground/80 mt-0.5 font-normal">
+                                 Rep: {deal.assigned_rep_name}
+                               </p>
+                            )}
                             
                             <div className="flex flex-wrap gap-1.5 mt-3">
                               {/* Deal Type Badge */}
@@ -1191,6 +1196,15 @@ function PipelinePageContent() {
                         </div>
                       </>
                     )}
+
+                    <div>
+                      <p className="font-semibold text-muted-foreground uppercase text-[10px]">Assigned Rep</p>
+                      <p className="mt-1 font-medium text-foreground">
+                        {selectedDeal.assigned_rep_name || (
+                          <span className="text-muted-foreground italic font-normal">Unassigned</span>
+                        )}
+                      </p>
+                    </div>
 
                     <div className="col-span-2 border-t pt-3">
                       <p className="font-semibold text-muted-foreground uppercase text-[10px]">Notes</p>

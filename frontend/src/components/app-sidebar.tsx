@@ -147,20 +147,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     {
       title: "Tasks",
       icon: ListChecks,
-      collapsible: true,
-      subItems: [
-        { name: "Due Today", url: "#" },
-        { name: "Overdue", url: "#" },
-        { name: "Closing this month", url: "#" }
-      ],
+      collapsible: false,
+      url: "/tasks",
     },
     {
       title: "Settings",
       icon: Settings,
       collapsible: true,
       subItems: profile?.role === 'super_admin'
-        ? [{ name: "User Management", url: "/settings/users" }]
-        : [{ name: "Profile", url: "/settings/profile" }],
+        ? [
+            { name: "Users", url: "/settings/users" },
+            { name: "Profile", url: "/settings/profile" }
+          ]
+        : [
+            { name: "Profile", url: "/settings/profile" }
+          ],
     },
   ]
 

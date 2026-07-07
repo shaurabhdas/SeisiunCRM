@@ -119,3 +119,53 @@ export async function PUT(
 
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const admin = await requireSuperAdmin()
+  if (!admin) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  }
+
+  const { id } = await params
+
+  if (id === admin.id) {
+    return NextResponse.json(
+      { error: 'You cannot delete your own account.' },
+      { status: 400 }
+    )
+  }
+
+  try {
+    // 1. Set references in other tables to null to avoid foreign key violations
+    await adminClient.from('leads').update({ assigned_rep_id: null, assigned_rep_name: null }).eq('assigned_rep_id', id)
+    await adminClient.from('deals').update({ assigned_rep_id: null, assigned_rep_name: null }).eq('assigned_rep_id', id)
+    await adminClient.from('lead_activities').update({ logged_by: null }).eq('logged_by', id)
+    await adminClient.from('deal_activities').update({ logged_by: null }).eq('logged_by', id)
+    await adminClient.from('lead_stage_history').update({ changed_by: null }).eq('changed_by', id)
+    await adminClient.from('deal_stage_history').update({ changed_by: null }).eq('changed_by', id)
+
+    // 2. Delete the user profile from user_profiles table
+    const { error: profileError } = await adminClient
+      .from('user_profiles')
+      .delete()
+      .eq('id', id)
+
+    if (profileError) {
+      return NextResponse.json({ error: 'Failed to delete user profile' }, { status: 500 })
+    }
+
+    // 3. Delete the user from Supabase auth
+    const { error: authError } = await adminClient.auth.admin.deleteUser(id)
+    if (authError) {
+      return NextResponse.json({ error: 'Failed to delete user from authentication provider' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
+}
+

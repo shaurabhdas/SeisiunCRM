@@ -32,12 +32,12 @@ if (isServer && (!supabaseUrl || !supabaseKey)) {
 
 let schemaStorage: any = null
 if (typeof window === 'undefined') {
-  const g = global as any
-  if (!g.__schemaStorage) {
+  const p = process as any
+  if (!p.__schemaStorage) {
     const { AsyncLocalStorage } = require('async_hooks')
-    g.__schemaStorage = new AsyncLocalStorage()
+    p.__schemaStorage = new AsyncLocalStorage()
   }
-  schemaStorage = g.__schemaStorage
+  schemaStorage = p.__schemaStorage
 }
 export { schemaStorage }
 
@@ -47,8 +47,8 @@ let getDynamicSchema = () => supabaseSchema
 
 if (typeof window === 'undefined') {
   getDynamicSchema = () => {
-    const g = global as any
-    const storage = g.__schemaStorage
+    const p = process as any
+    const storage = p.__schemaStorage
     console.log("SCHEMA STORAGE ATTEMPT:", storage ? "EXISTS" : "MISSING", "STORE:", storage?.getStore())
     return storage?.getStore() || supabaseSchema
   }

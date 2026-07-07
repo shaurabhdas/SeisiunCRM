@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { fetchAccountsWithMetrics } from '@/lib/accounts'
+import { requireAuth } from '@/lib/auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,6 +20,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const authUser = await requireAuth()
     const body = await request.json()
     const { name, industry, company_size, sales_region, notes } = body
 
