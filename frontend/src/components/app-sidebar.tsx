@@ -119,17 +119,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: "/leads",
     },
     {
-      title: "Contacts",
-      icon: Contact,
-      collapsible: true,
-      subItems: [
-        { name: "All Contacts", url: "#" },
-        { name: "Decision Makers", url: "#" },
-        { name: "Champions", url: "#" },
-        { name: "Purchase Owner", url: "#" }
-      ],
-    },
-    {
       title: "Accounts",
       icon: Building2,
       collapsible: false,
@@ -165,14 +154,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     },
   ]
 
-  const focusViews = [
-    { name: "Closing this month", icon: TrendingUp },
-    { name: "Stale opportunities", icon: Activity },
-    { name: "Copilot review queue", icon: Sparkles },
-    { name: "Manager task board", icon: ClipboardList },
-    { name: "Expansion pipeline", icon: BriefcaseBusiness },
-    { name: "More", icon: Ellipsis },
-  ]
+
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -273,22 +255,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
         </SidebarGroup>
 
-        <SidebarGroup className="mt-4 py-0">
-          <SidebarGroupLabel className="px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">Focus Views</SidebarGroupLabel>
-          <SidebarMenu className="mt-1.5 space-y-0.5">
-            {focusViews.map((item) => {
-              const Icon = item.icon
-              return (
-                <SidebarMenuItem key={item.name}>
-                  <SidebarMenuButton tooltip={item.name} render={<a href="#" />}>
-                    <Icon className="size-4 shrink-0" />
-                    <span>{item.name}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
+
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border/40 p-2">
