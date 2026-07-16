@@ -3,7 +3,7 @@
 import * as React from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { PulseCards } from "@/components/pulse-cards"
-import { PulseConfidence } from "@/components/pulse-confidence"
+import { PipelineActivity } from "@/components/pipeline-activity"
 import { DetailedPipeline } from "@/components/detailed-pipeline"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -74,7 +74,7 @@ export default function Page() {
               <div className="px-4 lg:px-6">
                 <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
                   <DetailedPipeline refreshKey={refreshKey} onRefresh={handleRefresh} />
-                  <PulseConfidence refreshKey={refreshKey} />
+                  <PipelineActivity refreshKey={refreshKey} />
                 </div>
               </div>
             </div>
