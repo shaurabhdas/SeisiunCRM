@@ -4,6 +4,7 @@ import * as React from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { PulseCards } from "@/components/pulse-cards"
 import { PipelineActivity } from "@/components/pipeline-activity"
+import { PulseConfidence } from "@/components/pulse-confidence"
 import { DetailedPipeline } from "@/components/detailed-pipeline"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -72,10 +73,11 @@ export default function Page() {
               <PulseCards refreshKey={refreshKey} />
               
               <div className="px-4 lg:px-6">
-                <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-                  <DetailedPipeline refreshKey={refreshKey} onRefresh={handleRefresh} />
+                <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr] mb-6">
                   <PipelineActivity refreshKey={refreshKey} />
+                  <PulseConfidence refreshKey={refreshKey} />
                 </div>
+                <DetailedPipeline refreshKey={refreshKey} onRefresh={handleRefresh} />
               </div>
             </div>
           </div>
