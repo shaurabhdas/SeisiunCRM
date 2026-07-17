@@ -23,8 +23,8 @@ export default async function LoginPage({
         {/* Logo and Header */}
         <div className="flex flex-col items-center space-y-2 text-center">
           <div className="flex items-center gap-2">
-            <div className="flex aspect-square size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <CircleGauge className="size-6" />
+            <div className="flex aspect-square size-10 items-center justify-center overflow-hidden rounded-lg">
+              <img src="/seisiun-logo.png" alt="Seisiun Logo" className="size-full object-cover" />
             </div>
             <span className="font-semibold text-2xl tracking-tight text-foreground">Seisiun CRM</span>
           </div>

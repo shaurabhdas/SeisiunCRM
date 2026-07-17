@@ -162,8 +162,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" className="hover:bg-sidebar-accent" render={<Link href="/" />}>
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <CircleGauge className="size-5" />
+              <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg">
+                <img src="/seisiun-logo.png" alt="Seisiun Logo" className="size-full object-cover" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold text-foreground">Seisiun CRM</span>
