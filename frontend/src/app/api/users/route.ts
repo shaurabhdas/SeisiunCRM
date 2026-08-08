@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
 
-  const { email, full_name, role } = await request.json()
+  const { email, full_name, role, mode, password } = await request.json()
 
   if (!email || !role) {
     return NextResponse.json(
@@ -71,17 +71,58 @@ export async function POST(request: Request) {
     )
   }
 
-  const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
-    email,
-    {
-      data: { full_name: full_name || '' },
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
-    }
-  )
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
-  if (inviteError) {
+  if (mode === 'password') {
+    if (!password || password.length < 6) {
+      return NextResponse.json(
+        { error: 'Password must be at least 6 characters long.' },
+        { status: 400 }
+      )
+    }
+
+    const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: full_name || '' }
+    })
+
+    if (createError) {
+      return NextResponse.json(
+        { error: createError.message },
+        { status: 500 }
+      )
+    }
+
+    const { error: profileError } = await adminClient
+      .from('user_profiles')
+      .update({ role, status: 'active', full_name: full_name || '' })
+      .eq('id', userData.user.id)
+
+    if (profileError) {
+      return NextResponse.json(
+        { error: 'User created but role assignment failed. Check user_profiles manually.' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, userId: userData.user.id, mode: 'password' }, { status: 201 })
+  }
+
+  // Mode: link (default) - Generate setup link without relying on Supabase SMTP
+  const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+    type: 'invite',
+    email,
+    options: {
+      data: { full_name: full_name || '' },
+      redirectTo: `${siteUrl}/auth/callback`,
+    }
+  })
+
+  if (linkError) {
     return NextResponse.json(
-      { error: inviteError.message },
+      { error: linkError.message },
       { status: 500 }
     )
   }
@@ -89,14 +130,19 @@ export async function POST(request: Request) {
   const { error: profileError } = await adminClient
     .from('user_profiles')
     .update({ role, status: 'active', full_name: full_name || '' })
-    .eq('id', inviteData.user.id)
+    .eq('id', linkData.user.id)
 
   if (profileError) {
     return NextResponse.json(
-      { error: 'User invited but role assignment failed. Check user_profiles manually.' },
+      { error: 'User created but role assignment failed. Check user_profiles manually.' },
       { status: 500 }
     )
   }
 
-  return NextResponse.json({ success: true, userId: inviteData.user.id }, { status: 201 })
+  return NextResponse.json({
+    success: true,
+    userId: linkData.user.id,
+    mode: 'link',
+    actionLink: linkData.properties?.action_link
+  }, { status: 201 })
 }

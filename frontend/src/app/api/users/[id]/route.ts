@@ -100,18 +100,54 @@ export async function PUT(
       return NextResponse.json({ error: 'Failed to restore access' }, { status: 500 })
     }
 
-    const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
-      body.email,
-      {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
-      }
-    )
+    return NextResponse.json({ success: true })
+  }
 
-    if (inviteError) {
+  if (action === 'generate_link') {
+    const { data: profile, error: profileErr } = await adminClient
+      .from('user_profiles')
+      .select('email')
+      .eq('id', id)
+      .single()
+
+    if (profileErr || !profile?.email) {
+      return NextResponse.json({ error: 'User profile email not found' }, { status: 404 })
+    }
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+      type: 'recovery',
+      email: profile.email,
+      options: {
+        redirectTo: `${siteUrl}/set-password`,
+      }
+    })
+
+    if (linkErr) {
+      return NextResponse.json({ error: linkErr.message }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      actionLink: linkData.properties?.action_link
+    })
+  }
+
+  if (action === 'reset_password') {
+    const { password } = body
+    if (!password || password.length < 6) {
       return NextResponse.json(
-        { error: 'Access restored but password reset email failed. User can request a reset manually.' },
-        { status: 500 }
+        { error: 'Password must be at least 6 characters long.' },
+        { status: 400 }
       )
+    }
+
+    const { error: updateError } = await adminClient.auth.admin.updateUserById(id, {
+      password
+    })
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })

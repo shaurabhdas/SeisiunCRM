@@ -5,7 +5,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { createClient } from "@/lib/supabase/client"
-import { Plus, Users, UserCheck, UserMinus, ShieldAlert, X } from "lucide-react"
+import { Plus, Users, UserCheck, UserMinus, ShieldAlert, X, Copy, Check, Key, Link as LinkIcon, Lock } from "lucide-react"
 
 interface UserProfile {
   id: string
@@ -28,6 +28,8 @@ export default function UserManagementPage() {
   const [revokeModalOpen, setRevokeModalOpen] = React.useState(false)
   const [restoreModalOpen, setRestoreModalOpen] = React.useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false)
+  const [generatedLinkModalOpen, setGeneratedLinkModalOpen] = React.useState(false)
+  const [resetPasswordModalOpen, setResetPasswordModalOpen] = React.useState(false)
 
   // Selected user for action
   const [selectedUser, setSelectedUser] = React.useState<UserProfile | null>(null)
@@ -36,7 +38,15 @@ export default function UserManagementPage() {
   const [inviteEmail, setInviteEmail] = React.useState("")
   const [inviteFullName, setInviteFullName] = React.useState("")
   const [inviteRole, setInviteRole] = React.useState("rep")
+  const [createMode, setCreateMode] = React.useState<"password" | "link">("password")
+  const [invitePassword, setInvitePassword] = React.useState("")
+
   const [selectedRole, setSelectedRole] = React.useState("rep")
+  const [resetPasswordInput, setResetPasswordInput] = React.useState("")
+
+  const [generatedLink, setGeneratedLink] = React.useState("")
+  const [generatedLinkUserEmail, setGeneratedLinkUserEmail] = React.useState("")
+  const [copied, setCopied] = React.useState(false)
 
   const [errorMessage, setErrorMessage] = React.useState("")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
@@ -76,23 +86,91 @@ export default function UserManagementPage() {
           email: inviteEmail,
           full_name: inviteFullName,
           role: inviteRole,
+          mode: createMode,
+          password: createMode === "password" ? invitePassword : undefined,
         }),
       })
       const result = await res.json()
       if (res.ok) {
         setInviteModalOpen(false)
+        const emailUsed = inviteEmail
         setInviteEmail("")
         setInviteFullName("")
+        setInvitePassword("")
         setInviteRole("rep")
         await fetchUsers()
+
+        if (result.mode === "link" && result.actionLink) {
+          setGeneratedLink(result.actionLink)
+          setGeneratedLinkUserEmail(emailUsed)
+          setGeneratedLinkModalOpen(true)
+        }
       } else {
-        setErrorMessage(result.error || "Failed to invite user")
+        setErrorMessage(result.error || "Failed to create user")
       }
     } catch (err) {
       setErrorMessage("An unexpected error occurred.")
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleGenerateLinkForUser = async (profile: UserProfile) => {
+    setErrorMessage("")
+    try {
+      const res = await fetch(`/api/users/${profile.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "generate_link" }),
+      })
+      const result = await res.json()
+      if (res.ok && result.actionLink) {
+        setSelectedUser(profile)
+        setGeneratedLink(result.actionLink)
+        setGeneratedLinkUserEmail(profile.email)
+        setGeneratedLinkModalOpen(true)
+      } else {
+        alert(result.error || "Failed to generate setup link")
+      }
+    } catch (err) {
+      alert("Error generating setup link")
+    }
+  }
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedUser) return
+    setErrorMessage("")
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(`/api/users/${selectedUser.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reset_password",
+          password: resetPasswordInput,
+        }),
+      })
+      const result = await res.json()
+      if (res.ok) {
+        setResetPasswordModalOpen(false)
+        setSelectedUser(null)
+        setResetPasswordInput("")
+        alert("Password updated successfully!")
+      } else {
+        setErrorMessage(result.error || "Failed to reset password")
+      }
+    } catch (err) {
+      setErrorMessage("An unexpected error occurred.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   const handleRoleSubmit = async (e: React.FormEvent) => {
@@ -227,7 +305,7 @@ export default function UserManagementPage() {
                   User Management
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Invite team members, assign roles, and manage access.
+                  Add team members directly, assign roles, set passwords, and manage access.
                 </p>
               </div>
               <button
@@ -238,7 +316,7 @@ export default function UserManagementPage() {
                 className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 text-sm font-medium transition-colors shadow-sm cursor-pointer self-start md:self-auto"
               >
                 <Plus className="size-4" />
-                Invite User
+                Add User
               </button>
             </div>
 
@@ -367,7 +445,7 @@ export default function UserManagementPage() {
                             </td>
                             <td className="p-4 text-right">
                               {!isSelf && (
-                                <div className="flex justify-end gap-2">
+                                <div className="flex justify-end gap-1.5 flex-wrap">
                                   {profile.status === "active" && (profile.role === "manager" || profile.role === "rep") && (
                                     <>
                                       <button
@@ -377,9 +455,30 @@ export default function UserManagementPage() {
                                           setErrorMessage("")
                                           setRoleModalOpen(true)
                                         }}
-                                        className="rounded-md border border-input bg-background hover:bg-muted px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer"
+                                        className="rounded-md border border-input bg-background hover:bg-muted px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer"
                                       >
-                                        Change Role
+                                        Role
+                                      </button>
+                                      <button
+                                        onClick={() => handleGenerateLinkForUser(profile)}
+                                        title="Copy setup link for user"
+                                        className="inline-flex items-center gap-1 rounded-md border border-input bg-background hover:bg-muted px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer"
+                                      >
+                                        <LinkIcon className="size-3" />
+                                        Setup Link
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedUser(profile)
+                                          setResetPasswordInput("")
+                                          setErrorMessage("")
+                                          setResetPasswordModalOpen(true)
+                                        }}
+                                        title="Set new password for user"
+                                        className="inline-flex items-center gap-1 rounded-md border border-input bg-background hover:bg-muted px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer"
+                                      >
+                                        <Key className="size-3" />
+                                        Set Pass
                                       </button>
                                       <button
                                         onClick={() => {
@@ -387,9 +486,9 @@ export default function UserManagementPage() {
                                           setErrorMessage("")
                                           setRevokeModalOpen(true)
                                         }}
-                                        className="rounded-md bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer"
+                                        className="rounded-md bg-red-50 text-red-600 hover:bg-red-100 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer"
                                       >
-                                        Revoke Access
+                                        Revoke
                                       </button>
                                       <button
                                         onClick={() => {
@@ -397,24 +496,32 @@ export default function UserManagementPage() {
                                           setErrorMessage("")
                                           setDeleteModalOpen(true)
                                         }}
-                                        className="rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer"
+                                        className="rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer"
                                       >
-                                        Delete User
+                                        Delete
                                       </button>
                                     </>
                                   )}
                                   {profile.status === "pending" && (
                                     <>
                                       <button
+                                        onClick={() => handleGenerateLinkForUser(profile)}
+                                        className="inline-flex items-center gap-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer shadow-xs"
+                                      >
+                                        <LinkIcon className="size-3" />
+                                        Get Link
+                                      </button>
+                                      <button
                                         onClick={() => {
                                           setSelectedUser(profile)
-                                          setSelectedRole("rep")
+                                          setResetPasswordInput("")
                                           setErrorMessage("")
-                                          setRoleModalOpen(true)
+                                          setResetPasswordModalOpen(true)
                                         }}
-                                        className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer shadow-sm"
+                                        className="inline-flex items-center gap-1 rounded-md border border-input bg-background hover:bg-muted px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer"
                                       >
-                                        Assign Role
+                                        <Key className="size-3" />
+                                        Set Pass
                                       </button>
                                       <button
                                         onClick={() => {
@@ -422,9 +529,9 @@ export default function UserManagementPage() {
                                           setErrorMessage("")
                                           setDeleteModalOpen(true)
                                         }}
-                                        className="rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer"
+                                        className="rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer"
                                       >
-                                        Delete User
+                                        Delete
                                       </button>
                                     </>
                                   )}
@@ -436,9 +543,9 @@ export default function UserManagementPage() {
                                           setErrorMessage("")
                                           setRestoreModalOpen(true)
                                         }}
-                                        className="rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer"
+                                        className="rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer"
                                       >
-                                        Restore Access
+                                        Restore
                                       </button>
                                       <button
                                         onClick={() => {
@@ -446,9 +553,9 @@ export default function UserManagementPage() {
                                           setErrorMessage("")
                                           setDeleteModalOpen(true)
                                         }}
-                                        className="rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer"
+                                        className="rounded-md border border-red-200 bg-white text-red-600 hover:bg-red-50 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer"
                                       >
-                                        Delete User
+                                        Delete
                                       </button>
                                     </>
                                   )}
@@ -467,12 +574,12 @@ export default function UserManagementPage() {
         </SidebarInset>
       </div>
 
-      {/* Invite User Modal */}
+      {/* Add User Modal */}
       {inviteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-[440px] rounded-xl border border-border bg-card p-6 shadow-lg space-y-4">
+          <div className="w-full max-w-[460px] rounded-xl border border-border bg-card p-6 shadow-lg space-y-4">
             <div className="flex items-center justify-between border-b border-border pb-3">
-              <h2 className="text-lg font-semibold text-foreground">Invite User</h2>
+              <h2 className="text-lg font-semibold text-foreground">Add New User</h2>
               <button
                 onClick={() => setInviteModalOpen(false)}
                 className="rounded-md p-1 hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
@@ -482,6 +589,39 @@ export default function UserManagementPage() {
             </div>
 
             <form onSubmit={handleInviteSubmit} className="space-y-4">
+              {/* Creation Method Selector */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  User Creation Method
+                </label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-muted/50 rounded-lg border border-border">
+                  <button
+                    type="button"
+                    onClick={() => setCreateMode("password")}
+                    className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      createMode === "password"
+                        ? "bg-card text-foreground shadow-xs border border-border"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Lock className="size-3.5" />
+                    Set Password Now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCreateMode("link")}
+                    className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      createMode === "link"
+                        ? "bg-card text-foreground shadow-xs border border-border"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <LinkIcon className="size-3.5" />
+                    Generate Setup Link
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <label htmlFor="invite-name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Full Name
@@ -503,7 +643,7 @@ export default function UserManagementPage() {
                 <input
                   id="invite-email"
                   type="email"
-                  placeholder="avery@pulsecrm.ai"
+                  placeholder="avery@seisiunanalytics.com"
                   required
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
@@ -527,6 +667,29 @@ export default function UserManagementPage() {
                 </select>
               </div>
 
+              {createMode === "password" ? (
+                <div className="space-y-1.5">
+                  <label htmlFor="invite-password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Initial Password *
+                  </label>
+                  <input
+                    id="invite-password"
+                    type="password"
+                    placeholder="At least 6 characters"
+                    required
+                    minLength={6}
+                    value={invitePassword}
+                    onChange={(e) => setInvitePassword(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                  <p className="text-2xs text-muted-foreground">User can log in immediately at /login using this password.</p>
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 text-xs text-blue-900 dark:text-blue-300">
+                  ⚡ <strong>No Email Server Required</strong>: Generates an instant setup link that you can copy and send directly to the user via Slack, Teams, or email.
+                </div>
+              )}
+
               {errorMessage && (
                 <div className="text-sm text-destructive font-medium bg-red-50 border border-red-100 rounded-md p-2">
                   {errorMessage}
@@ -546,7 +709,145 @@ export default function UserManagementPage() {
                   disabled={isSubmitting}
                   className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 text-sm font-medium transition-colors shadow-sm cursor-pointer disabled:opacity-50"
                 >
-                  {isSubmitting ? "Inviting..." : "Send Invite"}
+                  {isSubmitting ? "Creating..." : createMode === "password" ? "Create User" : "Generate Setup Link"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Generated Setup Link Modal */}
+      {generatedLinkModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-[480px] rounded-xl border border-border bg-card p-6 shadow-lg space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3 text-emerald-700">
+              <div className="flex items-center gap-2">
+                <Check className="size-5 text-emerald-600" />
+                <h2 className="text-lg font-semibold text-foreground">User Setup Link Ready</h2>
+              </div>
+              <button
+                onClick={() => setGeneratedLinkModalOpen(false)}
+                className="rounded-md p-1 hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Copy this setup link and share it directly with <strong className="text-foreground">{generatedLinkUserEmail}</strong> via Slack, Teams, or messaging. They can click it to complete setup.
+              </p>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={generatedLink}
+                  className="flex h-10 w-full rounded-md border border-input bg-muted/40 px-3 py-2 text-xs font-mono text-foreground focus-visible:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(generatedLink)}
+                  className="inline-flex items-center justify-center gap-1.5 h-10 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 px-4 text-xs font-medium transition-colors shrink-0 shadow-xs cursor-pointer"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="size-3.5" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="size-3.5" />
+                      Copy Link
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setGeneratedLinkModalOpen(false)}
+                className="rounded-md border border-input bg-background hover:bg-muted px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {resetPasswordModalOpen && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-[440px] rounded-xl border border-border bg-card p-6 shadow-lg space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="flex items-center gap-2 text-foreground">
+                <Key className="size-5 text-primary" />
+                <h2 className="text-lg font-semibold">Set New Password</h2>
+              </div>
+              <button
+                onClick={() => {
+                  setResetPasswordModalOpen(false)
+                  setSelectedUser(null)
+                }}
+                className="rounded-md p-1 hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  User Account
+                </div>
+                <div className="text-sm text-foreground bg-muted/40 p-2.5 rounded-md border border-border font-medium">
+                  {selectedUser.full_name || selectedUser.email} ({selectedUser.email})
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="reset-pass" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  New Password *
+                </label>
+                <input
+                  id="reset-pass"
+                  type="password"
+                  required
+                  minLength={6}
+                  placeholder="At least 6 characters"
+                  value={resetPasswordInput}
+                  onChange={(e) => setResetPasswordInput(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+
+              {errorMessage && (
+                <div className="text-sm text-destructive font-medium bg-red-50 border border-red-100 rounded-md p-2">
+                  {errorMessage}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetPasswordModalOpen(false)
+                    setSelectedUser(null)
+                  }}
+                  className="rounded-md border border-input bg-background hover:bg-muted px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="rounded-md bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 text-sm font-medium transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? "Updating..." : "Update Password"}
                 </button>
               </div>
             </form>
