@@ -38,9 +38,12 @@ export default function SetPasswordPage() {
         const result = await setPassword(formData)
         if (result && result.error) {
           setError(result.error)
+        } else if (result && result.success) {
+          window.location.href = '/'
         }
-      } catch (err) {
-        setError('An unexpected error occurred. Please try again.')
+      } catch (err: any) {
+        console.error('Set password error:', err)
+        setError(err?.message || 'An unexpected error occurred. Please try again.')
       }
     })
   }

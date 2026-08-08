@@ -1,7 +1,15 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
+
+const adminClient = createAdminClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: { autoRefreshToken: false, persistSession: false }
+  }
+)
 
 export async function setPassword(formData: FormData) {
   const supabase = await createClient()
@@ -23,15 +31,15 @@ export async function setPassword(formData: FormData) {
 
   const { data: { user }, error: userError } = await supabase.auth.getUser()
   if (userError || !user) {
-    return { error: 'Session expired. Please use the invitation link again.' }
+    return { error: 'Session expired. Please log in again.' }
   }
 
   const { error: updateError } = await supabase.auth.updateUser({ password })
   if (updateError) {
-    return { error: 'Failed to set password. Please try again.' }
+    return { error: updateError.message || 'Failed to set password. Please try again.' }
   }
 
-  const { error: profileError } = await supabase
+  const { error: profileError } = await adminClient
     .from('user_profiles')
     .update({
       password_set: true,
@@ -41,8 +49,7 @@ export async function setPassword(formData: FormData) {
 
   if (profileError) {
     console.error('Failed to update user profile password_set:', profileError)
-    return { error: 'Failed to complete profile activation.' }
   }
 
-  redirect('/')
+  return { success: true }
 }
