@@ -32,9 +32,14 @@ export function getTimeframeDates(timeframe: string, referenceDate = new Date())
     const diffToLastMonday = start.getDate() - day - 6 + (day === 0 ? -6 : 1)
     start.setDate(diffToLastMonday)
     end.setDate(start.getDate() + 6)
-  } else if (timeframe === 'month-to-date') {
+  } else if (timeframe === 'month-to-date' || timeframe === 'this-month') {
     start.setDate(1)
+  } else if (timeframe === 'this-year') {
+    start.setMonth(0, 1)
+  } else if (timeframe === 'all-time') {
+    start.setTime(new Date(2020, 0, 1).getTime())
   }
+  // 'today' needs no adjustment - start/end already bracket referenceDate's day
 
   return { start, end }
 }
