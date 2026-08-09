@@ -6,12 +6,13 @@ import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { Card } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
-import { Loader2, KeyRound, UserRound, ShieldAlert, CheckCircle2, AlertCircle } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Loader2, KeyRound, UserRound, ShieldAlert, CheckCircle2, AlertCircle, Mail, Link2, Unlink } from "lucide-react"
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const supabase = createClient()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [loading, setLoading] = React.useState(true)
   const [profile, setProfile] = React.useState<any>(null)
@@ -32,6 +33,63 @@ export default function ProfilePage() {
   // Danger Zone State
   const [dangerLoading, setDangerLoading] = React.useState(false)
   const [dangerMessage, setDangerMessage] = React.useState<{ type: 'success' | 'error', text: string } | null>(null)
+
+  // Email Integration State
+  const [emailStatusLoading, setEmailStatusLoading] = React.useState(true)
+  const [outlookConnected, setOutlookConnected] = React.useState(false)
+  const [outlookEmail, setOutlookEmail] = React.useState<string | null>(null)
+  const [emailActionLoading, setEmailActionLoading] = React.useState(false)
+  const [emailMessage, setEmailMessage] = React.useState<{ type: 'success' | 'error', text: string } | null>(null)
+
+  const fetchOutlookStatus = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/email/oauth/status')
+      const data = await res.json()
+      setOutlookConnected(!!data.connected)
+      setOutlookEmail(data.email || null)
+    } catch (err) {
+      console.error("Error loading Outlook status:", err)
+    } finally {
+      setEmailStatusLoading(false)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    fetchOutlookStatus()
+  }, [fetchOutlookStatus])
+
+  React.useEffect(() => {
+    if (searchParams.get('success') === 'outlook_connected') {
+      setEmailMessage({ type: 'success', text: 'Outlook account connected successfully.' })
+      router.replace('/settings/profile')
+    } else if (searchParams.get('error') === 'microsoft_oauth_failed') {
+      setEmailMessage({ type: 'error', text: 'Failed to connect Outlook account. Please try again.' })
+      router.replace('/settings/profile')
+    }
+  }, [searchParams, router])
+
+  const handleConnectOutlook = () => {
+    window.location.href = '/api/email/oauth/initiate'
+  }
+
+  const handleDisconnectOutlook = async () => {
+    setEmailActionLoading(true)
+    setEmailMessage(null)
+    try {
+      const res = await fetch('/api/email/oauth/disconnect', { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to disconnect Outlook account')
+      }
+      setOutlookConnected(false)
+      setOutlookEmail(null)
+      setEmailMessage({ type: 'success', text: 'Outlook account disconnected.' })
+    } catch (err: any) {
+      setEmailMessage({ type: 'error', text: err.message })
+    } finally {
+      setEmailActionLoading(false)
+    }
+  }
 
   const fetchProfile = React.useCallback(async () => {
     try {
@@ -333,6 +391,63 @@ export default function ProfilePage() {
               </form>
             </Card>
 
+            {/* Email Integration Card */}
+            <Card className="p-6 bg-card border shadow-xs">
+              <div className="flex items-center gap-2 mb-6">
+                <Mail className="size-5 text-indigo-500" />
+                <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Email Integration</h2>
+              </div>
+
+              {emailStatusLoading ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Checking connection status...
+                </div>
+              ) : outlookConnected ? (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-emerald-500" />
+                    <div>
+                      <p className="text-xs font-semibold text-foreground">Outlook connected</p>
+                      <p className="text-3xs text-muted-foreground mt-0.5">{outlookEmail}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDisconnectOutlook}
+                    disabled={emailActionLoading}
+                    className="rounded border px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted flex items-center gap-1.5 disabled:opacity-50 shrink-0"
+                  >
+                    {emailActionLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Unlink className="size-3.5" />}
+                    Disconnect
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <p className="text-xs text-muted-foreground">Connect your Outlook account to send emails from the CRM.</p>
+                  <button
+                    type="button"
+                    onClick={handleConnectOutlook}
+                    className="rounded bg-(--primary) px-4 py-2 text-xs font-semibold text-(--primary-foreground) hover:bg-neutral-800 flex items-center gap-1.5 shrink-0"
+                  >
+                    <Link2 className="size-3.5" />
+                    Connect Outlook Account
+                  </button>
+                </div>
+              )}
+
+              {emailMessage && (
+                <div className={`flex items-center gap-2 p-3 rounded-lg text-xs mt-4 ${
+                  emailMessage.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    : 'bg-red-50 text-red-800 border border-red-200'
+                }`}>
+                  {emailMessage.type === 'success' ? <CheckCircle2 className="size-4 shrink-0" /> : <AlertCircle className="size-4 shrink-0" />}
+                  <span>{emailMessage.text}</span>
+                </div>
+              )}
+            </Card>
+
             {/* Danger Zone Card */}
             <Card className="p-6 bg-red-50/5 border border-red-500/20 shadow-xs">
               <div className="flex items-center gap-2 mb-6">
@@ -369,5 +484,13 @@ export default function ProfilePage() {
         </div>
       </SidebarInset>
     </SidebarProvider>
+  )
+}
+
+export default function ProfilePage() {
+  return (
+    <React.Suspense fallback={<div className="flex h-screen items-center justify-center bg-[#f7f7f2] dark:bg-zinc-950/40 text-xs text-muted-foreground gap-2"><Loader2 className="size-4 animate-spin text-(--primary)" />Loading Profile Settings...</div>}>
+      <ProfilePageContent />
+    </React.Suspense>
   )
 }

@@ -53,6 +53,7 @@ import {
   CreditCard,
   Bell,
   LayoutDashboard,
+  Mail,
 } from "lucide-react"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -123,6 +124,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: Building2,
       collapsible: false,
       url: "/accounts",
+    },
+    {
+      title: "Email",
+      icon: Mail,
+      collapsible: false,
+      url: "/email",
     },
     {
       title: "Deals",

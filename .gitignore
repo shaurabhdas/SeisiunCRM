@@ -21,10 +21,16 @@
 # Local Environment / Secrets
 .env
 .env.local
+.env.local1
 .env.development.local
 .env.test.local
 .env.production.local
 .env.test
+.env.prod
+
+# Claude Code local settings
+.claude/settings.local.json
+.claude/skills/
 
 # Backups
 **/*.backup

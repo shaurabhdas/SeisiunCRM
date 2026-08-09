@@ -11,6 +11,7 @@ const breadcrumbLabels: Record<string, string> = {
   "/dashboard/team-activity": "Team Activity",
   "/leads": "Leads",
   "/accounts": "Accounts",
+  "/email": "Email",
   "/deals/pipeline": "Deals Pipeline",
   "/deals/at-risk": "Deals At Risk",
   "/settings/users": "User Management",

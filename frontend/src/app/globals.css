@@ -107,6 +107,19 @@
   --role-decision-maker: #1e3a8a;
   --role-technical-validator: #737373;
   --role-blocker: #e40014;
+
+  --industry-retail-bg: #dbeafe;
+  --industry-retail-text: #1e40af;
+  --industry-banking-bg: #1e3a8a;
+  --industry-banking-text: #ffffff;
+  --industry-insurance-bg: #7c3aed;
+  --industry-insurance-text: #ffffff;
+  --industry-energy-bg: #f59e0b;
+  --industry-energy-text: #1c1917;
+  --industry-logistics-bg: #0d9488;
+  --industry-logistics-text: #ffffff;
+  --industry-general-bg: #f5f5f5;
+  --industry-general-text: #404040;
 }
 
 .dark {

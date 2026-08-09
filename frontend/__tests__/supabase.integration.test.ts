@@ -8,7 +8,7 @@ const supabase = createClient(
   process.env.SUPABASE_TEST_SERVICE_KEY!,
   {
     db: {
-      schema: 'test'
+      schema: process.env.SUPABASE_TEST_SCHEMA || 'test'
     },
     realtime: {
       transport: ws
@@ -1087,5 +1087,105 @@ describe('Tasks schema and operations', () => {
       .eq('id', task.id)
 
     expect(check.length).toBe(0)
+  })
+})
+
+describe('Email schema verification', () => {
+
+  let testTemplateId: string
+  let testAttachmentId: string
+  let testEmailId: string
+
+  afterAll(async () => {
+    if (testEmailId) await supabase.from('emails').delete().eq('id', testEmailId)
+    if (testAttachmentId) await supabase.from('email_attachments').delete().eq('id', testAttachmentId)
+    if (testTemplateId) await supabase.from('email_templates').delete().eq('id', testTemplateId)
+  })
+
+  it('creates an email template with correct defaults', async () => {
+    const { data: template, error } = await supabase
+      .from('email_templates')
+      .insert({
+        name: 'Test Template',
+        industry: 'retail',
+        subject: 'Test Subject {{prospect_company}}',
+        body_html: '<p>Hello {{prospect_name}}</p>',
+      })
+      .select()
+      .single()
+
+    expect(error).toBeNull()
+    expect(template.industry).toBe('retail')
+    expect(template.is_default).toBe(false)
+    testTemplateId = template.id
+  })
+
+  it('rejects invalid industry value on template', async () => {
+    const { error } = await supabase
+      .from('email_templates')
+      .insert({
+        name: 'Bad Template',
+        industry: 'invalid_industry',
+        subject: 'Test',
+        body_html: '<p>Test</p>',
+      })
+
+    expect(error).toBeTruthy()
+  })
+
+  it('creates an email attachment record', async () => {
+    const { data: attachment, error } = await supabase
+      .from('email_attachments')
+      .insert({
+        file_name: 'test-brochure.pdf',
+        file_type: 'application/pdf',
+        file_size: 1024000,
+        storage_path: 'email-attachments/test-brochure.pdf',
+        category: 'brochure',
+      })
+      .select()
+      .single()
+
+    expect(error).toBeNull()
+    expect(attachment.category).toBe('brochure')
+    testAttachmentId = attachment.id
+  })
+
+  it('creates a sent email record with jsonb recipients', async () => {
+    const { data: email, error } = await supabase
+      .from('emails')
+      .insert({
+        sent_from: 'test@seisiunanalytics.com',
+        sent_by_name: 'Test Rep',
+        to_recipients: [{ email: 'prospect@example.com', name: 'Test Prospect' }],
+        cc_recipients: [],
+        subject: 'Test Email Subject',
+        body_html: '<p>Test body</p>',
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    expect(error).toBeNull()
+    expect(email.status).toBe('sent')
+    expect(Array.isArray(email.to_recipients)).toBe(true)
+    testEmailId = email.id
+  })
+
+  it('rejects invalid status value on email', async () => {
+    const { error } = await supabase
+      .from('emails')
+      .insert({
+        sent_from: 'test@seisiunanalytics.com',
+        sent_by_name: 'Test Rep',
+        to_recipients: [],
+        cc_recipients: [],
+        subject: 'Test',
+        body_html: '<p>Test</p>',
+        status: 'invalid_status',
+      })
+
+    expect(error).toBeTruthy()
   })
 })
