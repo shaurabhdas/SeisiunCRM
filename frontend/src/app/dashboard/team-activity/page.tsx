@@ -16,6 +16,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+const TIMEFRAME_LABELS: Record<string, string> = {
+  "this-week": "This Week",
+  "last-week": "Last Week",
+  "month-to-date": "Month-to-Date",
+}
+
 export default function Page() {
   const [timeframe, setTimeframe] = React.useState("this-week")
 
@@ -46,7 +52,9 @@ export default function Page() {
               <span className="text-xs font-medium text-muted-foreground">Timeframe:</span>
               <Select value={timeframe} onValueChange={(val) => setTimeframe(val || "this-week")}>
                 <SelectTrigger className="w-[180px] bg-card border shadow-2xs text-sm rounded-lg">
-                  <SelectValue placeholder="Select timeframe" />
+                  <SelectValue placeholder="Select timeframe">
+                    {(value: string) => TIMEFRAME_LABELS[value] ?? value}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="rounded-lg">
                   <SelectItem value="this-week" className="rounded-md">This Week</SelectItem>

@@ -54,6 +54,13 @@ interface DealRow {
   isDeal?: boolean
 }
 
+const STAGE_LABELS: Record<string, string> = {
+  Qualified: "Qualified",
+  Discovery: "Discovery",
+  Proposal: "Proposal",
+  Negotiation: "Negotiation",
+}
+
 export function DetailedPipeline({ 
   refreshKey, 
   onRefresh 
@@ -307,7 +314,9 @@ export function DetailedPipeline({
               <div className="col-span-3">
                 <Select value={editStage} onValueChange={(val) => setEditStage(val || "")}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select stage" />
+                    <SelectValue placeholder="Select stage">
+                      {(value: string) => STAGE_LABELS[value] ?? value}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Qualified">Qualified</SelectItem>
