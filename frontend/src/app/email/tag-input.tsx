@@ -77,15 +77,15 @@ export function TagInput({
     }
   }
 
+  const suppressBlurRef = React.useRef(false)
+
   const handleBlur = () => {
-    // Delay so a dropdown option's onClick (which also blurs the input) can run first.
-    setTimeout(() => {
-      const trimmed = queryRef.current.trim()
-      if (allowFreeform && trimmed && EMAIL_PATTERN.test(trimmed)) {
-        addTag({ label: trimmed, value: trimmed })
-      }
-      setShowDropdown(false)
-    }, 150)
+    if (suppressBlurRef.current) return
+    const trimmed = queryRef.current.trim()
+    if (allowFreeform && trimmed && EMAIL_PATTERN.test(trimmed)) {
+      addTag({ label: trimmed, value: trimmed })
+    }
+    setShowDropdown(false)
   }
 
   return (
@@ -124,7 +124,15 @@ export function TagInput({
             <button
               key={opt.value}
               type="button"
-              onClick={() => addTag(opt)}
+              onMouseDown={(e) => {
+                // Prevent the input from blurring at all, so there's no race with handleBlur.
+                e.preventDefault()
+                suppressBlurRef.current = true
+              }}
+              onClick={() => {
+                addTag(opt)
+                suppressBlurRef.current = false
+              }}
               className="w-full text-left px-3 py-2 text-xs hover:bg-muted"
             >
               <div className="font-medium">{opt.label}</div>
