@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       if (error) throw error
       return NextResponse.json(templates)
     } catch (error) {
-      return NextResponse.json({ error: String(error) }, { status: 500 })
+      return NextResponse.json({ error: error instanceof Error ? error.message : JSON.stringify(error) }, { status: 500 })
     }
   })
 }
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       if (error) throw error
       return NextResponse.json(template, { status: 201 })
     } catch (error) {
-      return NextResponse.json({ error: String(error) }, { status: 500 })
+      return NextResponse.json({ error: error instanceof Error ? error.message : JSON.stringify(error) }, { status: 500 })
     }
   })
 }

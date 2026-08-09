@@ -122,7 +122,7 @@ export async function PUT(
       })
     } catch (error) {
       return NextResponse.json(
-        { error: 'Failed to update deal stage', details: String(error) },
+        { error: 'Failed to update deal stage', details: error instanceof Error ? error.message : JSON.stringify(error) },
         { status: 500 }
       )
     }

@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(leaderboard)
     } catch (error) {
       return NextResponse.json(
-        { error: 'Failed to fetch leaderboard data', details: String(error) },
+        { error: 'Failed to fetch leaderboard data', details: error instanceof Error ? error.message : JSON.stringify(error) },
         { status: 500 }
       )
     }

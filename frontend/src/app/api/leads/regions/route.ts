@@ -17,6 +17,6 @@ export async function GET() {
     const regions = Array.from(new Set((accounts || []).map(a => a.sales_region).filter(Boolean)))
     return NextResponse.json(regions)
   } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 })
+    return NextResponse.json({ error: error instanceof Error ? error.message : JSON.stringify(error) }, { status: 500 })
   }
 }

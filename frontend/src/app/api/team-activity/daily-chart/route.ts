@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
     }
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to fetch data', details: String(error) },
+      { error: 'Failed to fetch data', details: error instanceof Error ? error.message : JSON.stringify(error) },
       { status: 500 }
     )
   }

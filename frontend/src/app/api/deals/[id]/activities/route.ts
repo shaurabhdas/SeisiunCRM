@@ -26,7 +26,7 @@ export async function POST(
       return NextResponse.json(activity, { status: 201 })
     } catch (error) {
       return NextResponse.json(
-        { error: 'Failed to log deal activity', details: String(error) },
+        { error: 'Failed to log deal activity', details: error instanceof Error ? error.message : JSON.stringify(error) },
         { status: 500 }
       )
     }

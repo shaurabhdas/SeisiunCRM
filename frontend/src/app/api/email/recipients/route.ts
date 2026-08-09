@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json(recipients)
     } catch (error) {
-      return NextResponse.json({ error: String(error) }, { status: 500 })
+      return NextResponse.json({ error: error instanceof Error ? error.message : JSON.stringify(error) }, { status: 500 })
     }
   })
 }

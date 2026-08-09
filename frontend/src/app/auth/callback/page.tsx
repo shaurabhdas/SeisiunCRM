@@ -64,7 +64,7 @@ export default function AuthCallbackPage() {
           router.push('/login?error=auth_error')
         }
       } catch (err) {
-        setError(String(err))
+        setError(err instanceof Error ? err.message : JSON.stringify(err))
         router.push('/login?error=auth_error')
       }
     }
