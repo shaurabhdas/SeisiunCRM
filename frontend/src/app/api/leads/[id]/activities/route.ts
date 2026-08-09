@@ -1,19 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, schemaStorage } from '@/lib/accounts'
 import { requireAuth } from '@/lib/auth'
-
-function camelCaseActivity(a: any) {
-  if (!a) return null
-  return {
-    id: a.id,
-    leadId: a.lead_id,
-    activityType: a.activity_type,
-    activityDate: a.activity_date,
-    note: a.note,
-    loggedBy: a.logged_by,
-    createdAt: a.created_at
-  }
-}
+import { camelCaseActivity } from '@/lib/leads'
 
 export async function POST(
   request: NextRequest,

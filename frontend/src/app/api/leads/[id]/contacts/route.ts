@@ -1,26 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuth } from '@/lib/auth'
+import { camelCaseContact } from '@/lib/leads'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
-
-function camelCaseContact(c: any) {
-  if (!c) return null
-  return {
-    id: c.id,
-    firstName: c.first_name,
-    lastName: c.last_name,
-    email: c.email,
-    phone: c.phone,
-    leadId: c.lead_id,
-    accountId: c.account_id,
-    stakeholderRole: c.stakeholder_role,
-    createdAt: c.created_at
-  }
-}
 
 export async function POST(
   request: NextRequest,
