@@ -15,14 +15,17 @@ export async function PUT(
     await requireAuth()
     const { id } = await params
     const body = await request.json()
-    const { value, stage, nextAction } = body
+    const { value, stage, nextAction, manualProbability, overrideRiskFlag, customRiskText } = body
 
     const { data, error } = await supabase
       .from('leads')
       .update({
         deal_value: value ? Number(value) : undefined,
         stage: stage || undefined,
-        pain_points: nextAction || undefined
+        pain_points: nextAction || undefined,
+        manual_probability: manualProbability,
+        override_risk_flag: overrideRiskFlag,
+        custom_risk_text: customRiskText || null
       })
       .eq('id', id)
       .select()

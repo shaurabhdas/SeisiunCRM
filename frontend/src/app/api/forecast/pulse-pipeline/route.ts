@@ -69,9 +69,14 @@ export async function GET(request: NextRequest) {
         return actDate >= fourteenDaysAgo
       }).length
 
-      const prob = STAGE_PROBABILITIES[l.stage?.toLowerCase()] || 10
+      const prob = l.manual_probability !== null && l.manual_probability !== undefined
+        ? Number(l.manual_probability)
+        : (STAGE_PROBABILITIES[l.stage?.toLowerCase()] || 10)
 
       const riskFlags: string[] = []
+      if (l.override_risk_flag) {
+        riskFlags.push(l.custom_risk_text || 'Flagged at risk')
+      }
       if (recentActivitiesCount === 0 && ['connected', 'presentation', 'demo', 'evaluating'].includes(l.stage?.toLowerCase())) {
         riskFlags.push('Stale opportunity')
       }
@@ -96,9 +101,9 @@ export async function GET(request: NextRequest) {
         timelineArrow: 'stable',
         activityVelocity: `${recentActivitiesCount} touches`,
         activityCount: recentActivitiesCount,
-        overrideRiskFlag: false,
-        customRiskText: null,
-        manualProbability: null,
+        overrideRiskFlag: l.override_risk_flag || false,
+        customRiskText: l.custom_risk_text,
+        manualProbability: l.manual_probability !== null && l.manual_probability !== undefined ? Number(l.manual_probability) : null,
         expectedCloseDate: l.forecast_close_date
       }
     })
