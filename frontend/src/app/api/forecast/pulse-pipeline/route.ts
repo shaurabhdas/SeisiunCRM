@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { calculateDaysSinceContact as calculateDays } from '@/lib/followup'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,19 +16,6 @@ const STAGE_PROBABILITIES: Record<string, number> = {
   presentation: 60,
   demo: 80,
   evaluating: 90
-}
-
-function calculateDays(dateStr: string | null): number | null {
-  if (!dateStr) return null
-  const dateOnly = dateStr.split('T')[0]
-  const today = new Date()
-  const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
-  const [year, month, day] = dateOnly.split('-').map(Number)
-  if (isNaN(year) || isNaN(month) || isNaN(day)) return null
-  const lastUTC = Date.UTC(year, month - 1, day)
-  const diffTime = todayUTC - lastUTC
-  if (diffTime < 0) return 0
-  return Math.floor(diffTime / (1000 * 60 * 60 * 24))
 }
 
 export async function GET(request: NextRequest) {

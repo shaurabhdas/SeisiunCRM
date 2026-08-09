@@ -1,27 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { calculateDaysSinceContact } from '@/lib/followup'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
-
-function calculateDaysSinceContact(lastConnectDate: string | null): number | null {
-  if (!lastConnectDate) return null
-  const dateOnly = lastConnectDate.split('T')[0]
-  const today = new Date()
-  const todayUTC = Date.UTC(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  )
-  const [year, month, day] = dateOnly.split('-').map(Number)
-  if (isNaN(year) || isNaN(month) || isNaN(day)) return null
-  const lastUTC = Date.UTC(year, month - 1, day)
-  const diffTime = todayUTC - lastUTC
-  if (diffTime < 0) return 0
-  return Math.floor(diffTime / (1000 * 60 * 60 * 24))
-}
 
 export async function GET(request: NextRequest) {
   try {

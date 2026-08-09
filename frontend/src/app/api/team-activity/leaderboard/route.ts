@@ -1,27 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, schemaStorage } from '@/lib/accounts'
-
-function getTimeframeDates(timeframe: string, referenceDate = new Date()) {
-  const start = new Date(referenceDate)
-  const end = new Date(referenceDate)
-  start.setHours(0, 0, 0, 0)
-  end.setHours(23, 59, 59, 999)
-
-  if (timeframe === 'this-week') {
-    const day = start.getDay()
-    const diff = start.getDate() - day + (day === 0 ? -6 : 1)
-    start.setDate(diff)
-  } else if (timeframe === 'last-week') {
-    const day = start.getDay()
-    const diffToLastMonday = start.getDate() - day - 6 + (day === 0 ? -6 : 1)
-    start.setDate(diffToLastMonday)
-    end.setDate(start.getDate() + 6)
-  } else if (timeframe === 'month-to-date') {
-    start.setDate(1)
-  }
-
-  return { start, end }
-}
+import { getTimeframeDates } from '@/lib/followup'
 
 export async function GET(request: NextRequest) {
   const schema = request.headers.get('x-supabase-schema') || 'public'
