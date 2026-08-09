@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase, schemaStorage } from '@/lib/accounts'
 import { requireAuth } from '@/lib/auth'
 import { getValidAccessToken, sendEmailViaGraph } from '@/lib/microsoft-graph'
+import { sanitizeEmailHtml } from '@/lib/sanitize-html'
 
 type Recipient = { email: string; name?: string }
 
@@ -90,12 +91,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const substitutedBody = substituteVariables(bodyHtml, {
+      const substitutedBody = sanitizeEmailHtml(substituteVariables(bodyHtml, {
         rep_name: authUser.full_name,
         company_name: 'Seisiun Analytics',
         prospect_name: toRecipients[0]?.name || '',
         prospect_company: '',
-      })
+      }))
 
       const { messageId } = await sendEmailViaGraph(accessToken, {
         toRecipients,

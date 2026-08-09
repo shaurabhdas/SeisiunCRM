@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, schemaStorage } from '@/lib/accounts'
 import { requireAuth, isManagerOrAbove } from '@/lib/auth'
+import { sanitizeEmailHtml } from '@/lib/sanitize-html'
 
 export async function GET(request: NextRequest) {
   const schema = request.headers.get('x-supabase-schema') || 'public'
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
           name,
           industry,
           subject,
-          body_html: bodyHtml,
+          body_html: sanitizeEmailHtml(bodyHtml),
           created_by: authUser.id,
           created_by_name: authUser.full_name,
         })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, schemaStorage } from '@/lib/accounts'
 import { requireAuth, isManagerOrAbove } from '@/lib/auth'
+import { sanitizeEmailHtml } from '@/lib/sanitize-html'
 
 export async function GET(request: NextRequest) {
   const schema = request.headers.get('x-supabase-schema') || 'public'
@@ -21,7 +22,13 @@ export async function GET(request: NextRequest) {
 
       const { data: emails, error } = await query
       if (error) throw error
-      return NextResponse.json(emails)
+
+      const sanitized = (emails || []).map((email: any) => ({
+        ...email,
+        body_html: email.body_html ? sanitizeEmailHtml(email.body_html) : email.body_html,
+      }))
+
+      return NextResponse.json(sanitized)
     } catch (error) {
       return NextResponse.json({ error: String(error) }, { status: 500 })
     }

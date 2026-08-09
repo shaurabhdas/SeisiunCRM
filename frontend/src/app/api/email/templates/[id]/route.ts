@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, schemaStorage } from '@/lib/accounts'
 import { requireAuth, isManagerOrAbove } from '@/lib/auth'
+import { sanitizeEmailHtml } from '@/lib/sanitize-html'
 
 export async function PUT(
   request: NextRequest,
@@ -24,7 +25,7 @@ export async function PUT(
           name,
           industry,
           subject,
-          body_html: bodyHtml,
+          body_html: bodyHtml ? sanitizeEmailHtml(bodyHtml) : bodyHtml,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
