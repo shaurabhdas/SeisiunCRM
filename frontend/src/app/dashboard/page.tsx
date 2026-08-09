@@ -4,7 +4,7 @@ import * as React from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { PulseCards } from "@/components/pulse-cards"
 import { PipelineActivity } from "@/components/pipeline-activity"
-import { StageConfidence } from "@/components/stage-confidence"
+import { PulseConfidence } from "@/components/pulse-confidence"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { TrendingUp, TrendingDown } from "lucide-react"
@@ -74,7 +74,7 @@ export default function Page() {
               <div className="px-4 lg:px-6">
                 <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
                   <PipelineActivity refreshKey={refreshKey} />
-                  <StageConfidence />
+                  <PulseConfidence refreshKey={refreshKey} />
                 </div>
               </div>
             </div>
