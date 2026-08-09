@@ -54,6 +54,8 @@ interface Lead {
   id: string
   opportunityName: string
   stage: string
+  accountId: string | null
+  accountName: string | null
 }
 
 export default function Page() {
@@ -267,7 +269,9 @@ function PipelinePageContent() {
         setAllLeads(rawLeads.map((l: any) => ({
           id: l.id,
           opportunityName: l.opportunityName,
-          stage: l.stage
+          stage: l.stage,
+          accountId: l.accountId ?? l.account?.id ?? null,
+          accountName: l.account?.name ?? null
         })))
       }
     } catch (err) {
@@ -1526,7 +1530,18 @@ function PipelinePageContent() {
                 <label className="text-[10px] font-bold text-muted-foreground uppercase">Linked Lead</label>
                 <select
                   value={newDealForm.leadId}
-                  onChange={(e) => setNewDealForm({ ...newDealForm, leadId: e.target.value })}
+                  onChange={(e) => {
+                    const leadId = e.target.value
+                    const lead = allLeads.find(l => l.id === leadId)
+                    if (lead && lead.accountId && lead.accountName) {
+                      setNewDealForm({ ...newDealForm, leadId, accountId: lead.accountId, accountName: lead.accountName })
+                      setConfirmedAccountName(lead.accountName)
+                      setIsAccountConfirmed(true)
+                      setAccountQuery("")
+                    } else {
+                      setNewDealForm({ ...newDealForm, leadId })
+                    }
+                  }}
                   className="w-full bg-card border rounded px-3 py-2 text-xs mt-1"
                 >
                   <option value="">No linked lead</option>
