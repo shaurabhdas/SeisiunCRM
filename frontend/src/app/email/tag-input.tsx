@@ -29,6 +29,7 @@ export function TagInput({
   const [query, setQuery] = React.useState("")
   const [showDropdown, setShowDropdown] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement>(null)
+  const queryRef = React.useRef("")
 
   const selectedValues = new Set(selected.map(s => s.value))
   const filteredOptions = options.filter(
@@ -56,6 +57,7 @@ export function TagInput({
     if (selectedValues.has(tag.value)) return
     onChange([...selected, tag])
     setQuery("")
+    queryRef.current = ""
     setShowDropdown(false)
   }
 
@@ -73,6 +75,17 @@ export function TagInput({
     } else if (e.key === "Backspace" && !query && selected.length > 0) {
       removeTag(selected[selected.length - 1].value)
     }
+  }
+
+  const handleBlur = () => {
+    // Delay so a dropdown option's onClick (which also blurs the input) can run first.
+    setTimeout(() => {
+      const trimmed = queryRef.current.trim()
+      if (allowFreeform && trimmed && EMAIL_PATTERN.test(trimmed)) {
+        addTag({ label: trimmed, value: trimmed })
+      }
+      setShowDropdown(false)
+    }, 150)
   }
 
   return (
@@ -94,10 +107,12 @@ export function TagInput({
           value={query}
           onChange={(e) => {
             setQuery(e.target.value)
+            queryRef.current = e.target.value
             setShowDropdown(true)
           }}
           onFocus={() => setShowDropdown(true)}
           onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
           placeholder={selected.length === 0 ? placeholder : ""}
           className="flex-1 min-w-24 bg-transparent text-xs outline-none py-0.5"
         />

@@ -13,8 +13,13 @@ export async function GET(request: NextRequest) {
 
       if (error) throw error
 
+      const seenEmails = new Set<string>()
       const recipients = (contacts || [])
-        .filter((c: any) => c.email)
+        .filter((c: any) => {
+          if (!c.email || seenEmails.has(c.email)) return false
+          seenEmails.add(c.email)
+          return true
+        })
         .map((c: any) => ({
           name: `${c.first_name} ${c.last_name}`.trim(),
           email: c.email,

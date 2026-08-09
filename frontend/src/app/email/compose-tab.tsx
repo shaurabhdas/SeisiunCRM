@@ -188,6 +188,11 @@ export function ComposeTab({
 
   const canSend = outlookConnected && to.length > 0 && subject.trim() && stripHtml(body).length > 0 && !sending
 
+  const missingFields: string[] = []
+  if (to.length === 0) missingFields.push("a recipient (press Enter after typing an email)")
+  if (!subject.trim()) missingFields.push("a subject")
+  if (stripHtml(body).length === 0) missingFields.push("a body")
+
   const handleSend = async () => {
     setSendError(null)
     setSending(true)
@@ -380,7 +385,10 @@ export function ComposeTab({
             )}
           </div>
 
-          <div className="flex justify-end pt-2">
+          <div className="flex items-center justify-end gap-3 pt-2">
+            {outlookConnected && missingFields.length > 0 && !sending && (
+              <p className="text-3xs text-muted-foreground">Add {missingFields.join(", ")} to send.</p>
+            )}
             {!outlookConnected ? (
               <button
                 type="button"
@@ -395,6 +403,7 @@ export function ComposeTab({
                 type="button"
                 onClick={handleSend}
                 disabled={!canSend}
+                title={missingFields.length > 0 ? `Add ${missingFields.join(", ")} to send.` : undefined}
                 className="rounded bg-(--primary) px-4 py-2 text-xs font-semibold text-(--primary-foreground) hover:bg-neutral-800 flex items-center gap-1.5 disabled:opacity-50"
               >
                 {sending && <Loader2 className="size-3.5 animate-spin" />}
