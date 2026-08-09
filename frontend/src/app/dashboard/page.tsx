@@ -59,9 +59,9 @@ export default function Page() {
                 </SelectTrigger>
                 <SelectContent className="rounded-lg">
                   <SelectItem value="today" className="rounded-md">Today</SelectItem>
-                  <SelectItem value="this-week" className="rounded-md">This Week</SelectItem>
-                  <SelectItem value="this-month" className="rounded-md">This Month</SelectItem>
-                  <SelectItem value="this-year" className="rounded-md">This Year</SelectItem>
+                  <SelectItem value="this-week" className="rounded-md">Current Week</SelectItem>
+                  <SelectItem value="this-month" className="rounded-md">Current Month</SelectItem>
+                  <SelectItem value="this-year" className="rounded-md">Current Year</SelectItem>
                   <SelectItem value="all-time" className="rounded-md">All Time</SelectItem>
                 </SelectContent>
               </Select>
