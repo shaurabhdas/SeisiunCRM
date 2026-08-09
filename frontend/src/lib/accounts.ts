@@ -1,6 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { calculateDaysSinceContact } from './followup'
 
+// Escapes Postgres LIKE/ILIKE wildcards (%, _) and the escape char itself so
+// a caller-supplied value is matched literally instead of as a pattern.
+export function escapeIlikePattern(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
+}
+
 const isTest = typeof window === 'undefined' && process.env.NODE_ENV === 'test'
 let ws: any = null
 if (isTest) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, schemaStorage } from '@/lib/accounts'
+import { supabase, schemaStorage, escapeIlikePattern } from '@/lib/accounts'
 import { fetchDeals, createDeal } from '@/lib/deals'
 import { requireAuth } from '@/lib/auth'
 
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         const { data: existingAccount } = await supabase
           .from('accounts')
           .select('id')
-          .ilike('name', accountName)
+          .ilike('name', escapeIlikePattern(accountName))
           .maybeSingle()
 
         if (existingAccount) {
