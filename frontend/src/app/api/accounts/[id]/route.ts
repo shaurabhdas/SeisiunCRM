@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, canModifyRecord } from '@/lib/auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,10 +12,21 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuth()
+    const authUser = await requireAuth()
     const { id } = await params
     const body = await request.json()
     const { name, industry, company_size, sales_region, notes } = body
+
+    const { data: existingAccount, error: fetchErr } = await supabase
+      .from('accounts')
+      .select('created_by')
+      .eq('id', id)
+      .single()
+    if (fetchErr) throw fetchErr
+
+    if (!canModifyRecord(authUser, existingAccount.created_by)) {
+      return NextResponse.json({ error: 'Only the account creator or a manager can update this account.' }, { status: 403 })
+    }
 
     const { data, error } = await supabase
       .from('accounts')
@@ -42,8 +53,19 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuth()
+    const authUser = await requireAuth()
     const { id } = await params
+
+    const { data: existingAccount, error: fetchErr } = await supabase
+      .from('accounts')
+      .select('created_by')
+      .eq('id', id)
+      .single()
+    if (fetchErr) throw fetchErr
+
+    if (!canModifyRecord(authUser, existingAccount.created_by)) {
+      return NextResponse.json({ error: 'Only the account creator or a manager can delete this account.' }, { status: 403 })
+    }
 
     // Cascade delete in Supabase
     // Fetch all leads for this account

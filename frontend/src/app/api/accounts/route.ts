@@ -31,7 +31,8 @@ export async function POST(request: NextRequest) {
         industry: industry || null,
         company_size: company_size || null,
         sales_region: sales_region || 'US East',
-        notes: notes || null
+        notes: notes || null,
+        created_by: authUser.id
       })
       .select()
       .single()

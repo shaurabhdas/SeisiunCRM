@@ -1,15 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/accounts'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, canModifyRecord } from '@/lib/auth'
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuth()
+    const authUser = await requireAuth()
     const { id } = await params
     const body = await request.json()
+
+    const { data: existingDeal, error: fetchErr } = await (supabase as any)
+      .from('deals')
+      .select('assigned_rep_id')
+      .eq('id', id)
+      .single()
+    if (fetchErr) throw fetchErr
+
+    if (!canModifyRecord(authUser, existingDeal.assigned_rep_id)) {
+      return NextResponse.json({ error: 'Only the assigned rep or a manager can update this deal.' }, { status: 403 })
+    }
 
     // Omit stage changes in this route as specified
     const { stage, ...updates } = body
@@ -37,8 +48,19 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuth()
+    const authUser = await requireAuth()
     const { id } = await params
+
+    const { data: existingDeal, error: fetchErr } = await supabase
+      .from('deals')
+      .select('assigned_rep_id')
+      .eq('id', id)
+      .single()
+    if (fetchErr) throw fetchErr
+
+    if (!canModifyRecord(authUser, existingDeal.assigned_rep_id)) {
+      return NextResponse.json({ error: 'Only the assigned rep or a manager can delete this deal.' }, { status: 403 })
+    }
 
     // Delete in cascade order explicitly as requested
     const { error: histErr } = await supabase

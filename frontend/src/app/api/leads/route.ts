@@ -65,7 +65,8 @@ export async function POST(request: NextRequest) {
             .from('accounts')
             .insert({
               name: accountName,
-              sales_region: salesRegion || 'US East'
+              sales_region: salesRegion || 'US East',
+              created_by: authUser.id
             })
             .select()
             .single()

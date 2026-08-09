@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, schemaStorage } from '@/lib/accounts'
 import { updateDealStage } from '@/lib/deals'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, canModifyRecord } from '@/lib/auth'
 
 export async function PUT(
   request: NextRequest,
@@ -81,7 +81,11 @@ export async function PUT(
 
       // Rule 3: Any stage to Closed Lost
       if (toStage === 'closed_lost') {
-        const lostReason = options.lost_reason !== undefined 
+        if (!canModifyRecord(authUser, deal.assigned_rep_id)) {
+          return NextResponse.json({ error: 'Only the assigned rep or a manager can mark this deal as lost.' }, { status: 403 })
+        }
+
+        const lostReason = options.lost_reason !== undefined
           ? options.lost_reason 
           : deal.lost_reason
         const allowedReasons = [

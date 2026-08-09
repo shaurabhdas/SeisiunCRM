@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, schemaStorage } from '@/lib/accounts'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, canModifyRecord } from '@/lib/auth'
 import { camelCaseLead } from '@/lib/leads'
 
 export async function PUT(
@@ -59,6 +59,10 @@ export async function PUT(
         if (fromStage === 'evaluating' && toStage === 'deal') {
           if (!postDemoOutcome) return NextResponse.json({ error: 'A post demo outcome must be selected to close this lead.' }, { status: 400 })
           if (['not_now', 'not_a_fit'].includes(postDemoOutcome)) {
+            if (!canModifyRecord(authUser, lead.assigned_rep_id)) {
+              return NextResponse.json({ error: 'Only the assigned rep or a manager can disqualify this lead.' }, { status: 403 })
+            }
+
             const { data: updatedLead, error: upErr } = await supabase
               .from('leads')
               .update({

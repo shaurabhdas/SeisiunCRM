@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, schemaStorage } from '@/lib/accounts'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, canModifyRecord } from '@/lib/auth'
 import { camelCaseLead } from '@/lib/leads'
 
 export async function PUT(
@@ -10,7 +10,7 @@ export async function PUT(
   const schema = request.headers.get('x-supabase-schema') || 'public'
   return schemaStorage.run(schema, async () => {
     try {
-      await requireAuth()
+      const authUser = await requireAuth()
       const { id } = await params
       const body = await request.json()
       const {
@@ -34,6 +34,10 @@ export async function PUT(
         .single()
 
       if (fetchErr) throw fetchErr
+
+      if (!canModifyRecord(authUser, lead.assigned_rep_id)) {
+        return NextResponse.json({ error: 'Only the assigned rep or a manager can update this lead.' }, { status: 403 })
+      }
 
       const { data: updatedLead, error: updateErr } = await supabase
         .from('leads')
@@ -79,8 +83,19 @@ export async function DELETE(
   const schema = request.headers.get('x-supabase-schema') || 'public'
   return schemaStorage.run(schema, async () => {
     try {
-      await requireAuth()
+      const authUser = await requireAuth()
       const { id } = await params
+
+      const { data: lead, error: fetchErr } = await supabase
+        .from('leads')
+        .select('assigned_rep_id')
+        .eq('id', id)
+        .single()
+      if (fetchErr) throw fetchErr
+
+      if (!canModifyRecord(authUser, lead.assigned_rep_id)) {
+        return NextResponse.json({ error: 'Only the assigned rep or a manager can delete this lead.' }, { status: 403 })
+      }
 
       const { error: actErr } = await supabase
         .from('lead_activities')

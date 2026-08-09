@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, canModifyRecord } from '@/lib/auth'
 import { camelCaseLead } from '@/lib/leads'
 
 const supabase = createClient(
@@ -13,19 +13,23 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAuth()
+    const authUser = await requireAuth()
     const { id } = await params
     const body = await request.json()
     const { reason } = body
 
     const { data: lead, error: leadErr } = await supabase
       .from('leads')
-      .select('id, stage')
+      .select('id, stage, assigned_rep_id')
       .eq('id', id)
       .single()
 
     if (leadErr || !lead) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
+    }
+
+    if (!canModifyRecord(authUser, lead.assigned_rep_id)) {
+      return NextResponse.json({ error: 'Only the assigned rep or a manager can disqualify this lead.' }, { status: 403 })
     }
 
     const { data: updatedLead, error: updateErr } = await supabase

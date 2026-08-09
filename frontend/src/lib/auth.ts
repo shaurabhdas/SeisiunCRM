@@ -90,3 +90,10 @@ export async function requireAuth(): Promise<AuthUser> {
 export function isManagerOrAbove(role: string): boolean {
   return role === 'super_admin' || role === 'manager'
 }
+
+// True if the user is a manager/super_admin (always allowed) or the record's
+// owner (assigned_rep_id for leads/deals, created_by for accounts).
+export function canModifyRecord(user: AuthUser, ownerId: string | null | undefined): boolean {
+  if (isManagerOrAbove(user.role)) return true
+  return !!ownerId && ownerId === user.id
+}
