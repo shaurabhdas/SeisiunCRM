@@ -1428,9 +1428,9 @@ function PipelinePageContent() {
       {/* MODAL 1: Add New Deal */}
       {isAddDealOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-card border rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-slide-up">
-            
-            <div className="flex items-center justify-between px-6 py-4 border-b">
+          <div className="bg-card border rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-slide-up flex flex-col max-h-[90vh]">
+
+            <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
               <h2 className="text-base font-bold text-foreground uppercase tracking-wider">New Deal Opportunity</h2>
               <button
                 onClick={() => setIsAddDealOpen(false)}
@@ -1440,7 +1440,7 @@ function PipelinePageContent() {
               </button>
             </div>
 
-            <form onSubmit={handleAddDeal} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+            <form id="new-deal-form" onSubmit={handleAddDeal} className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
               
               <div>
                 <label className="text-[10px] font-bold text-muted-foreground uppercase">Opportunity Name *</label>
@@ -1619,23 +1619,24 @@ function PipelinePageContent() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t mt-6">
-                <button
-                  type="button"
-                  onClick={() => setIsAddDealOpen(false)}
-                  className="border text-xs px-4 py-2 rounded-lg font-semibold cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-lg cursor-pointer"
-                >
-                  Create Deal
-                </button>
-              </div>
-
             </form>
+
+            <div className="flex justify-end gap-2 px-6 py-4 border-t shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsAddDealOpen(false)}
+                className="border text-xs px-4 py-2 rounded-lg font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="new-deal-form"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-lg cursor-pointer"
+              >
+                Create Deal
+              </button>
+            </div>
           </div>
         </div>
       )}
