@@ -10,8 +10,10 @@ export async function GET(request: NextRequest) {
       const deals = await fetchDeals()
       return NextResponse.json(deals)
     } catch (error) {
+      console.error('GET /api/deals error:', error)
+      const details = error instanceof Error ? error.message : JSON.stringify(error)
       return NextResponse.json(
-        { error: 'Failed to fetch deals', details: String(error) },
+        { error: 'Failed to fetch deals', details },
         { status: 500 }
       )
     }
@@ -62,8 +64,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // accountName is a client-only field (used above to resolve/create the account)
+      // and is not a column on the deals table — exclude it before inserting.
+      const { accountName: _accountName, ...dealPayload } = payload
+
       const newDeal = await createDeal({
-        ...payload,
+        ...dealPayload,
         account_id: finalAccountId || null,
         proposal_date: proposal_date,
         assigned_rep_id: authUser.id,
@@ -71,8 +77,10 @@ export async function POST(request: NextRequest) {
       })
       return NextResponse.json(newDeal, { status: 201 })
     } catch (error) {
+      console.error('POST /api/deals error:', error)
+      const details = error instanceof Error ? error.message : JSON.stringify(error)
       return NextResponse.json(
-        { error: 'Failed to create deal', details: String(error) },
+        { error: 'Failed to create deal', details },
         { status: 500 }
       )
     }
