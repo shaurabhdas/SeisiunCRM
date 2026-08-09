@@ -55,10 +55,12 @@ interface DealRow {
 }
 
 const STAGE_LABELS: Record<string, string> = {
-  Qualified: "Qualified",
-  Discovery: "Discovery",
-  Proposal: "Proposal",
-  Negotiation: "Negotiation",
+  contact: "Contact",
+  outreach: "Outreach",
+  connected: "Connected",
+  presentation: "Presentation",
+  demo: "Demo",
+  evaluating: "Evaluating",
 }
 
 export function DetailedPipeline({ 
@@ -249,7 +251,7 @@ export function DetailedPipeline({
                         )}
                       </div>
                     </td>
-                    <td className="py-3.5 px-2 text-muted-foreground">{deal.step}</td>
+                    <td className="py-3.5 px-2 text-muted-foreground">{STAGE_LABELS[deal.step] ?? deal.step}</td>
                     <td className="py-3.5 px-2 max-w-[200px] truncate">
                       <span className="rounded-full bg-sky-50 dark:bg-sky-950/20 text-sky-800 dark:text-sky-400 px-2.5 py-1 text-xs font-medium border border-sky-100 dark:border-sky-900/30">
                         {deal.lastAction}
@@ -319,10 +321,12 @@ export function DetailedPipeline({
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Qualified">Qualified</SelectItem>
-                    <SelectItem value="Discovery">Discovery</SelectItem>
-                    <SelectItem value="Proposal">Proposal</SelectItem>
-                    <SelectItem value="Negotiation">Negotiation</SelectItem>
+                    <SelectItem value="contact">Contact</SelectItem>
+                    <SelectItem value="outreach">Outreach</SelectItem>
+                    <SelectItem value="connected">Connected</SelectItem>
+                    <SelectItem value="presentation">Presentation</SelectItem>
+                    <SelectItem value="demo">Demo</SelectItem>
+                    <SelectItem value="evaluating">Evaluating</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

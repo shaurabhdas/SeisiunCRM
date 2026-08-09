@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireAuth, isManagerOrAbove } from '@/lib/auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,6 +11,11 @@ const formatK = (val: number) => `$${Math.round(val / 1000)}K`
 
 export async function GET(request: NextRequest) {
   try {
+    const authUser = await requireAuth()
+    if (!isManagerOrAbove(authUser.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const { data: allLeads, error: leadsErr } = await supabase.from('leads').select('*')
     if (leadsErr) throw leadsErr
 

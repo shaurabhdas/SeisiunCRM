@@ -5,18 +5,13 @@ import { BarChart3 } from "lucide-react"
 
 interface StageConfidenceItem {
   name: string
-  confidence: number
+  confidence: number | null
+  count?: number
+  insufficientData?: boolean
 }
 
 export function PulseConfidence({ refreshKey }: { refreshKey: number }) {
-  const defaultStages = [
-    { name: "Qualified", confidence: 42 },
-    { name: "Discovery", confidence: 57 },
-    { name: "Proposal", confidence: 63 },
-    { name: "Negotiation", confidence: 78 }
-  ]
-
-  const [stages, setStages] = React.useState<StageConfidenceItem[]>(defaultStages)
+  const [stages, setStages] = React.useState<StageConfidenceItem[]>([])
 
   React.useEffect(() => {
     fetch('/api/forecast/pulse-stages')
@@ -44,20 +39,34 @@ export function PulseConfidence({ refreshKey }: { refreshKey: number }) {
         </div>
 
         <div className="mt-7 grid gap-6">
-          {stages.map((stage) => (
-            <div key={stage.name}>
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium text-foreground">{stage.name}</span>
-                <span className="text-muted-foreground">{stage.confidence}% confidence</span>
+          {stages.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : (
+            stages.map((stage) => (
+              <div key={stage.name}>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-foreground">{stage.name}</span>
+                  {stage.insufficientData ? (
+                    <span className="text-muted-foreground/70 italic">
+                      Not enough history yet{stage.count ? ` · ${stage.count} in stage` : ''}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">{stage.confidence}% confidence</span>
+                  )}
+                </div>
+                <div className="mt-2 h-3 overflow-hidden rounded-full bg-muted">
+                  {stage.insufficientData ? (
+                    <div className="h-full w-full rounded-full border border-dashed border-muted-foreground/20" />
+                  ) : (
+                    <div
+                      className="h-full rounded-full bg-zinc-950 dark:bg-zinc-100 transition-all duration-500"
+                      style={{ width: `${stage.confidence}%` }}
+                    />
+                  )}
+                </div>
               </div>
-              <div className="mt-2 h-3 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-zinc-950 dark:bg-zinc-100 transition-all duration-500"
-                  style={{ width: `${stage.confidence}%` }}
-                />
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 

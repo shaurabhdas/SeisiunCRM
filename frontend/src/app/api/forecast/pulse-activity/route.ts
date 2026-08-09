@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { calculateDaysSinceContact } from '@/lib/followup'
+import { requireAuth, isManagerOrAbove } from '@/lib/auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,6 +10,11 @@ const supabase = createClient(
 
 export async function GET(request: NextRequest) {
   try {
+    const authUser = await requireAuth()
+    if (!isManagerOrAbove(authUser.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     // 1. Calculate Monday of current week
     const now = new Date()
     const currentDay = now.getDay()

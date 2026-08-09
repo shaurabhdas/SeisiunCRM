@@ -8,27 +8,72 @@ import { PulseConfidence } from "@/components/pulse-confidence"
 import { DetailedPipeline } from "@/components/detailed-pipeline"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { TrendingUp, TrendingDown } from "lucide-react"
+import { TrendingUp, TrendingDown, ShieldAlert } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 export default function Page() {
   const [refreshKey, setRefreshKey] = React.useState(0)
   const [commitIndicator, setCommitIndicator] = React.useState("")
+  const [canView, setCanView] = React.useState<boolean | null>(null)
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1)
   }
 
   React.useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) { setCanView(false); return }
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      setCanView(profile?.role === 'super_admin' || profile?.role === 'manager')
+    })
+  }, [])
+
+  React.useEffect(() => {
+    if (!canView) return
     fetch('/api/forecast/pulse-kpis')
       .then(res => res.json())
       .then(data => {
         setCommitIndicator(data.commitIndicator || "")
       })
       .catch(() => {})
-  }, [refreshKey])
+  }, [refreshKey, canView])
 
   const isUp = commitIndicator.startsWith("Commit up")
   const isDown = commitIndicator.startsWith("Commit down")
+
+  if (canView === false) {
+    return (
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": "calc(var(--spacing) * 72)",
+            "--header-height": "calc(var(--spacing) * 12)",
+          } as React.CSSProperties
+        }
+      >
+        <AppSidebar variant="inset" />
+        <SidebarInset>
+          <SiteHeader />
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-[#f7f7f2] dark:bg-zinc-950/40 p-10 text-center">
+            <ShieldAlert className="size-8 text-muted-foreground" />
+            <h1 className="text-lg font-bold text-foreground">Manager access only</h1>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Forecast Pulse shows company-wide pipeline and forecast data, so it's restricted to managers and admins.
+            </p>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    )
+  }
+
+  if (canView === null) {
+    return null
+  }
 
   return (
     <SidebarProvider

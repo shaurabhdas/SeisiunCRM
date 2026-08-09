@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { calculateDaysSinceContact as calculateDays } from '@/lib/followup'
+import { requireAuth, isManagerOrAbove } from '@/lib/auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,6 +21,11 @@ const STAGE_PROBABILITIES: Record<string, number> = {
 
 export async function GET(request: NextRequest) {
   try {
+    const authUser = await requireAuth()
+    if (!isManagerOrAbove(authUser.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const { data: leads, error: leadsErr } = await supabase.from('leads').select('*')
     if (leadsErr) throw leadsErr
 
@@ -39,7 +45,10 @@ export async function GET(request: NextRequest) {
     const { data: dealActivities, error: dealActsErr } = await supabase.from('deal_activities').select('*')
     if (dealActsErr) throw dealActsErr
 
-    const activeLeads = (leads || []).filter(l => l.stage !== 'disqualified')
+    // Exclude disqualified leads and leads already converted into a deal —
+    // a converted lead's opportunity is tracked via its deal row below, so
+    // including both would double-count the same opportunity's value.
+    const activeLeads = (leads || []).filter(l => !['disqualified', 'deal'].includes(l.stage?.toLowerCase() || ''))
     const accountMap = new Map((accounts || []).map(a => [a.id, a.name]))
 
     const now = new Date()

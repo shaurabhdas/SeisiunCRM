@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireAuth, isManagerOrAbove } from '@/lib/auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,8 +9,25 @@ const supabase = createClient(
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
+// Each displayed stage's confidence is the historical rate of leads that
+// entered it going on to enter the stage they map to here — including
+// 'evaluating', whose real next step is conversion to a won deal.
+const NEXT_STAGE: Record<string, string> = {
+  contact: 'outreach',
+  outreach: 'connected',
+  connected: 'presentation',
+  presentation: 'demo',
+  demo: 'evaluating',
+  evaluating: 'deal'
+}
+
 export async function GET(request: NextRequest) {
   try {
+    const authUser = await requireAuth()
+    if (!isManagerOrAbove(authUser.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const { data: allLeads, error: leadsErr } = await supabase.from('leads').select('*')
     if (leadsErr) throw leadsErr
 
@@ -19,12 +37,11 @@ export async function GET(request: NextRequest) {
     const leads = allLeads || []
     const history = allHistory || []
 
-    const sequence = ['contact', 'outreach', 'connected', 'presentation', 'demo', 'evaluating']
+    const sequence = Object.keys(NEXT_STAGE)
     const result = []
 
-    for (let i = 0; i < sequence.length; i++) {
-      const stage = sequence[i]
-      const nextStage = sequence[i + 1]
+    for (const stage of sequence) {
+      const nextStage = NEXT_STAGE[stage]
 
       // Leads that ever entered this stage
       const enteredLeads = Array.from(new Set(
@@ -35,14 +52,14 @@ export async function GET(request: NextRequest) {
 
       const nEntered = enteredLeads.length
 
-      if (i === sequence.length - 1 || nEntered < 2) {
-        // Insufficient history or last stage
+      if (nEntered < 2) {
+        // Not enough historical volume to compute a meaningful rate yet.
         const currentCount = leads.filter(l => l.stage?.toLowerCase() === stage).length
         result.push({
           name: capitalize(stage),
-          confidence: currentCount,
+          confidence: null,
           count: currentCount,
-          label: 'leads in stage'
+          insufficientData: true
         })
       } else {
         // Find how many of these entered leads ever entered the next stage
@@ -55,7 +72,8 @@ export async function GET(request: NextRequest) {
         const rate = Math.round((nAdvanced / nEntered) * 100)
         result.push({
           name: capitalize(stage),
-          confidence: rate
+          confidence: rate,
+          insufficientData: false
         })
       }
     }

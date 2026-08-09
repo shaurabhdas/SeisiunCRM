@@ -108,10 +108,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: "Dashboard",
       icon: LayoutDashboard,
       collapsible: true,
-      subItems: [
-        { name: "Forecast pulse", url: "/dashboard/forecast-pulse" },
-        { name: "Team Activity", url: "/dashboard/team-activity" }
-      ],
+      subItems: profile?.role === 'super_admin' || profile?.role === 'manager'
+        ? [
+            { name: "Forecast pulse", url: "/dashboard/forecast-pulse" },
+            { name: "Team Activity", url: "/dashboard/team-activity" }
+          ]
+        : [
+            { name: "Team Activity", url: "/dashboard/team-activity" }
+          ],
     },
     {
       title: "Leads",
