@@ -47,8 +47,10 @@ export async function getAuthUser(): Promise<AuthUser | null> {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    // Under testing, fallback to a mock Super Admin user if no active session
-    if (schema === 'test') {
+    // Under testing, fallback to a mock Super Admin user if no active session.
+    // Restricted to non-production so this can never authenticate a real
+    // deployment — see the matching check in lib/supabase/middleware.ts.
+    if (schema === 'test' && process.env.NODE_ENV !== 'production') {
       return {
         id: '6700f943-dd13-4df5-a2f6-bd56841ab7ef', // test admin id matching test database entries
         email: 'shaurabh.franciscan21@gmail.com',

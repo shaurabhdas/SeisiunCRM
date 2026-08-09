@@ -4,10 +4,12 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
-  console.log("MIDDLEWARE RUN:", request.nextUrl.pathname, "SCHEMA HEADER:", request.headers.get('x-supabase-schema'))
-
-  // Bypass middleware for integration tests targeting test schema
-  if (request.headers.get('x-supabase-schema') === 'test') {
+  // Bypass middleware for integration tests targeting the test schema.
+  // Restricted to non-production so this can never be used against real
+  // deployments — process.env.NODE_ENV is 'production' on every Vercel
+  // deployment (including Preview), and 'development' under `next dev`,
+  // which is what the local test suite runs against.
+  if (process.env.NODE_ENV !== 'production' && request.headers.get('x-supabase-schema') === 'test') {
     return supabaseResponse
   }
 
