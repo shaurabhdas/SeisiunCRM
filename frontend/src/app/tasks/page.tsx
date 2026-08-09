@@ -24,6 +24,7 @@ import {
 import { createClient } from "@/lib/supabase/client"
 import { useSearchParams, useRouter } from "next/navigation"
 import type { Task } from "@/lib/tasks"
+import { DEAL_TYPE_LABELS } from "@/lib/deals"
 
 /* ─────────────────────────────────────────────
    Helper: format date "MMM DD"
@@ -888,7 +889,7 @@ function TasksPageContent() {
                           <div>
                             <p className="text-sm font-medium">{(selectedTask.deal as any).opportunity_name}</p>
                             <div className="flex items-center gap-1 mt-0.5">
-                              <span className="text-xs text-muted-foreground">{(selectedTask.deal as any).deal_type}</span>
+                              <span className="text-xs text-muted-foreground">{DEAL_TYPE_LABELS[(selectedTask.deal as any).deal_type] || (selectedTask.deal as any).deal_type}</span>
                               <StatusBadge status={(selectedTask.deal as any).stage} />
                             </div>
                           </div>

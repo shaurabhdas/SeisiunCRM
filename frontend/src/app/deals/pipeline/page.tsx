@@ -39,7 +39,7 @@ import {
   formatDealValue
 } from "@/lib/followup"
 
-import { Deal, DealActivity, DealStageHistory } from "@/lib/deals"
+import { Deal, DealActivity, DealStageHistory, DEAL_TYPE_LABELS, dealTypeHasUpsell } from "@/lib/deals"
 
 interface Account {
   id: string
@@ -124,7 +124,7 @@ function PipelinePageContent() {
   const [isEditingOverview, setIsEditingOverview] = React.useState(false)
   const [overviewForm, setOverviewForm] = React.useState({
     opportunity_name: "",
-    deal_type: "poc" as "poc" | "full_contract",
+    deal_type: "poc" as "poc" | "half_year_contract" | "full_contract",
     reported_value: 0,
     potential_full_contract_value: 0 as number | null,
     value_confidence: "estimated" as "confirmed" | "estimated",
@@ -160,7 +160,7 @@ function PipelinePageContent() {
     accountName: "",
     accountId: "",
     leadId: "",
-    dealType: "poc" as "poc" | "full_contract",
+    dealType: "poc" as "poc" | "half_year_contract" | "full_contract",
     reportedValue: "" as string | number,
     potentialFullContractValue: "" as string | number,
     valueConfidence: "estimated" as "confirmed" | "estimated",
@@ -332,6 +332,10 @@ function PipelinePageContent() {
     .filter(d => d.deal_type === 'poc' && activeStages.includes(d.stage))
     .reduce((sum, d) => sum + Number(d.reported_value || 0), 0)
 
+  const halfYearPipelineVal = deals
+    .filter(d => d.deal_type === 'half_year_contract' && activeStages.includes(d.stage))
+    .reduce((sum, d) => sum + Number(d.reported_value || 0), 0)
+
   const fullPipelineVal = deals
     .filter(d => d.deal_type === 'full_contract' && activeStages.includes(d.stage))
     .reduce((sum, d) => sum + Number(d.reported_value || 0), 0)
@@ -359,7 +363,7 @@ function PipelinePageContent() {
         opportunity_name: newDealForm.opportunityName,
         deal_type: newDealForm.dealType,
         reported_value: Number(newDealForm.reportedValue || 0),
-        potential_full_contract_value: newDealForm.dealType === 'poc' && newDealForm.potentialFullContractValue ? Number(newDealForm.potentialFullContractValue) : null,
+        potential_full_contract_value: dealTypeHasUpsell(newDealForm.dealType) && newDealForm.potentialFullContractValue ? Number(newDealForm.potentialFullContractValue) : null,
         value_confidence: newDealForm.valueConfidence,
         sales_region: newDealForm.salesRegion,
         forecast_close_date: newDealForm.forecastCloseDate || null,
@@ -517,7 +521,7 @@ function PipelinePageContent() {
     if (!selectedDeal) return
     try {
       const body = {
-        opportunity_name: `${selectedDeal.opportunity_name} - Full Contract`,
+        opportunity_name: `${selectedDeal.opportunity_name} - 1 Year Contract`,
         deal_type: 'full_contract',
         reported_value: selectedDeal.potential_full_contract_value || 0,
         value_confidence: 'estimated',
@@ -609,6 +613,17 @@ function PipelinePageContent() {
     setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
 
+  const DEAL_TYPE_BG_TEXT_CLASSES: Record<string, string> = {
+    poc: "bg-amber-50 text-amber-800",
+    half_year_contract: "bg-sky-50 text-sky-800",
+    full_contract: "bg-teal-50 text-teal-800",
+  }
+  const DEAL_TYPE_BORDER_CLASSES: Record<string, string> = {
+    poc: "border-amber-200/50",
+    half_year_contract: "border-sky-200/50",
+    full_contract: "border-teal-200/50",
+  }
+
   return (
     <div className="flex flex-1 flex-col bg-[#f7f7f2] dark:bg-zinc-950/40 pb-10">
       
@@ -628,17 +643,21 @@ function PipelinePageContent() {
       </div>
 
       {/* Summary Stat Chips */}
-      <div className="grid grid-cols-1 gap-4 px-4 mt-6 md:grid-cols-4 lg:px-6">
+      <div className="grid grid-cols-1 gap-4 px-4 mt-6 md:grid-cols-3 lg:grid-cols-5 lg:px-6">
         <Card className="rounded-lg border bg-card p-4 shadow-xs">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Pipeline</p>
           <p className="mt-2 text-2xl font-bold text-foreground">{formatDealValue(totalPipelineVal)}</p>
         </Card>
         <Card className="rounded-lg border bg-card p-4 shadow-xs">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">POC Pipeline</p>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pilot Pipeline</p>
           <p className="mt-2 text-2xl font-bold text-foreground">{formatDealValue(pocPipelineVal)}</p>
         </Card>
         <Card className="rounded-lg border bg-card p-4 shadow-xs">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Full Contract Pipeline</p>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Half Year Pipeline</p>
+          <p className="mt-2 text-2xl font-bold text-foreground">{formatDealValue(halfYearPipelineVal)}</p>
+        </Card>
+        <Card className="rounded-lg border bg-card p-4 shadow-xs">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">1 Year Pipeline</p>
           <p className="mt-2 text-2xl font-bold text-foreground">{formatDealValue(fullPipelineVal)}</p>
         </Card>
         <Card className="rounded-lg border bg-card p-4 shadow-xs">
@@ -822,12 +841,8 @@ function PipelinePageContent() {
                             
                             <div className="flex flex-wrap gap-1.5 mt-3">
                               {/* Deal Type Badge */}
-                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                                deal.deal_type === 'poc'
-                                  ? "bg-amber-50 text-amber-800 border border-amber-200/50"
-                                  : "bg-teal-50 text-teal-800 border border-teal-200/50"
-                              }`}>
-                                {deal.deal_type === 'poc' ? 'POC' : 'Full Contract'}
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${DEAL_TYPE_BG_TEXT_CLASSES[deal.deal_type] || DEAL_TYPE_BG_TEXT_CLASSES.full_contract} ${DEAL_TYPE_BORDER_CLASSES[deal.deal_type] || DEAL_TYPE_BORDER_CLASSES.full_contract}`}>
+                                {DEAL_TYPE_LABELS[deal.deal_type] || deal.deal_type}
                               </span>
 
                               {/* Value Confidence Badge */}
@@ -916,10 +931,8 @@ function PipelinePageContent() {
             <p className="text-sm text-muted-foreground mt-0.5">{selectedDeal.account?.name || "No Account"}</p>
             
             <div className="flex flex-wrap gap-2 mt-4">
-              <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md ${
-                selectedDeal.deal_type === 'poc' ? "bg-amber-50 text-amber-800" : "bg-teal-50 text-teal-800"
-              }`}>
-                {selectedDeal.deal_type === 'poc' ? 'POC' : 'Full Contract'}
+              <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md ${DEAL_TYPE_BG_TEXT_CLASSES[selectedDeal.deal_type] || DEAL_TYPE_BG_TEXT_CLASSES.full_contract}`}>
+                {DEAL_TYPE_LABELS[selectedDeal.deal_type] || selectedDeal.deal_type}
               </span>
               <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-zinc-100 text-zinc-700">
                 {selectedDeal.value_confidence === 'confirmed' ? 'Confirmed' : 'Estimated'}
@@ -1025,8 +1038,9 @@ function PipelinePageContent() {
                           onChange={(e) => setOverviewForm({ ...overviewForm, deal_type: e.target.value as any })}
                           className="w-full bg-card border rounded px-2.5 py-1.5 text-xs mt-1"
                         >
-                          <option value="poc">POC</option>
-                          <option value="full_contract">Full Contract</option>
+                          <option value="poc">Pilot</option>
+                          <option value="half_year_contract">Half Year Contract</option>
+                          <option value="full_contract">1 Year Contract</option>
                         </select>
                       </div>
                       <div>
@@ -1105,9 +1119,9 @@ function PipelinePageContent() {
                         />
                       </div>
                     </div>
-                    {overviewForm.deal_type === 'poc' && (
+                    {dealTypeHasUpsell(overviewForm.deal_type) && (
                       <div>
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase">Potential Full Contract Value ($)</label>
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase">Full Agreement Value ($)</label>
                         <input
                           type="number"
                           value={overviewForm.potential_full_contract_value || 0}
@@ -1144,7 +1158,7 @@ function PipelinePageContent() {
                   <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-xs">
                     <div>
                       <p className="font-semibold text-muted-foreground uppercase text-[10px]">Deal Type</p>
-                      <p className="mt-1 font-medium text-foreground">{selectedDeal.deal_type === 'poc' ? 'POC' : 'Full Contract'}</p>
+                      <p className="mt-1 font-medium text-foreground">{DEAL_TYPE_LABELS[selectedDeal.deal_type] || selectedDeal.deal_type}</p>
                     </div>
                     <div>
                       <p className="font-semibold text-muted-foreground uppercase text-[10px]">Stage</p>
@@ -1183,15 +1197,15 @@ function PipelinePageContent() {
                       <p className="mt-1 font-medium text-foreground">{selectedDeal.competitor || 'None'}</p>
                     </div>
                     
-                    {/* POC specific fields */}
-                    {selectedDeal.deal_type === 'poc' && (
+                    {/* Upsell-eligible deal type fields */}
+                    {dealTypeHasUpsell(selectedDeal.deal_type) && (
                       <>
                         <div>
-                          <p className="font-semibold text-muted-foreground uppercase text-[10px]">Potential Full Contract Value</p>
+                          <p className="font-semibold text-muted-foreground uppercase text-[10px]">Full Agreement Value</p>
                           <p className="mt-1 font-medium text-foreground">{formatDealValue(selectedDeal.potential_full_contract_value)}</p>
                         </div>
                         <div>
-                          <p className="font-semibold text-muted-foreground uppercase text-[10px]">Estimated POC End Date</p>
+                          <p className="font-semibold text-muted-foreground uppercase text-[10px]">Estimated Full Agreement Date</p>
                           <p className="mt-1 font-medium text-foreground">
                             {selectedDeal.close_date 
                               ? new Date(new Date(selectedDeal.close_date).getTime() + 91 * 24 * 60 * 60 * 1000).toLocaleDateString() 
@@ -1236,7 +1250,9 @@ function PipelinePageContent() {
                   <div className="p-3 border rounded-lg bg-muted/10 flex items-center justify-between">
                     <div>
                       <p className="text-xs font-bold text-foreground">{selectedDeal.originating_deal?.opportunity_name}</p>
-                      <span className="text-[10px] text-muted-foreground uppercase font-semibold">{selectedDeal.originating_deal?.deal_type} POC</span>
+                      <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                        {selectedDeal.originating_deal ? (DEAL_TYPE_LABELS[selectedDeal.originating_deal.deal_type] || selectedDeal.originating_deal.deal_type) : ''}
+                      </span>
                     </div>
                     <button
                       onClick={() => setSelectedDealId(selectedDeal.originating_deal_id!)}
@@ -1450,7 +1466,7 @@ function PipelinePageContent() {
                 <label className="text-[10px] font-bold text-muted-foreground uppercase">Opportunity Name *</label>
                 <input
                   type="text"
-                  placeholder="e.g. Acme Corp POC"
+                  placeholder="e.g. Acme Corp Pilot"
                   value={newDealForm.opportunityName}
                   onChange={(e) => setNewDealForm({ ...newDealForm, opportunityName: e.target.value })}
                   className="w-full bg-card border rounded px-3 py-2 text-xs mt-1"
@@ -1562,8 +1578,9 @@ function PipelinePageContent() {
                     className="w-full bg-[#fcfcfa] dark:bg-zinc-900 border rounded px-3 py-2 text-xs mt-1"
                     required
                   >
-                    <option value="poc">POC</option>
-                    <option value="full_contract">Full Contract</option>
+                    <option value="poc">Pilot</option>
+                    <option value="half_year_contract">Half Year Contract</option>
+                    <option value="full_contract">1 Year Contract</option>
                   </select>
                 </div>
 
@@ -1581,9 +1598,7 @@ function PipelinePageContent() {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase">
-                    {newDealForm.dealType === 'poc' ? 'POC Fee (USD) *' : 'Contract Value (USD) *'}
-                  </label>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Agreement Amount (USD) *</label>
                   <input
                     type="number"
                     placeholder="e.g. 50000"
@@ -1594,9 +1609,9 @@ function PipelinePageContent() {
                   />
                 </div>
 
-                {newDealForm.dealType === 'poc' && (
+                {dealTypeHasUpsell(newDealForm.dealType) && (
                   <div>
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Estimated Full Contract Value (USD)</label>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Full Agreement Value (USD)</label>
                     <input
                       type="number"
                       placeholder="e.g. 250000"
@@ -1604,7 +1619,7 @@ function PipelinePageContent() {
                       onChange={(e) => setNewDealForm({ ...newDealForm, potentialFullContractValue: e.target.value })}
                       className="w-full bg-card border rounded px-3 py-2 text-xs mt-1"
                     />
-                    <p className="text-[9px] text-muted-foreground mt-1">Used for pipeline forecasting. Can be updated as the POC progresses.</p>
+                    <p className="text-[9px] text-muted-foreground mt-1">Used for pipeline forecasting. Can be updated as the engagement progresses.</p>
                   </div>
                 )}
               </div>
@@ -1695,9 +1710,9 @@ function PipelinePageContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fade-in">
           <div className="bg-card border rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-slide-up">
             <div className="px-6 py-5">
-              <h2 className="text-base font-extrabold text-foreground tracking-tight">Create Full Contract Opportunity?</h2>
+              <h2 className="text-base font-extrabold text-foreground tracking-tight">Create 1 Year Contract Opportunity?</h2>
               <p className="text-xs text-muted-foreground mt-2 leading-relaxed font-normal">
-                This POC is now closed. Would you like to create a full contract opportunity for this account?
+                This engagement is now closed. Would you like to create a 1 year contract opportunity for this account?
               </p>
               <div className="flex justify-end gap-2.5 mt-6 pt-4 border-t">
                 <button

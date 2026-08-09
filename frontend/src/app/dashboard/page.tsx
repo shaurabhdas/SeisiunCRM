@@ -18,9 +18,9 @@ import {
 
 const PERIOD_LABELS: Record<string, string> = {
   "today": "Today",
-  "this-week": "This Week",
-  "this-month": "This Month",
-  "this-year": "This Year",
+  "this-week": "Current Week",
+  "this-month": "Current Month",
+  "this-year": "Current Year",
   "all-time": "All Time",
 }
 

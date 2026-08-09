@@ -16,7 +16,13 @@ import {
   formatDealValue
 } from "@/lib/followup"
 
-import { Deal } from "@/lib/deals"
+import { Deal, DEAL_TYPE_LABELS } from "@/lib/deals"
+
+const DEAL_TYPE_BG_TEXT_CLASSES: Record<string, string> = {
+  poc: "bg-amber-50 text-amber-800",
+  half_year_contract: "bg-sky-50 text-sky-800",
+  full_contract: "bg-teal-50 text-teal-800",
+}
 
 interface Lead {
   id: string
@@ -152,10 +158,8 @@ function AtRiskPageContent() {
                         <td className="py-3.5 px-4 text-muted-foreground">{deal.account?.name || '—'}</td>
                         <td className="py-3.5 px-4 capitalize text-xs font-semibold text-foreground">{deal.stage.replace('_', ' ')}</td>
                         <td className="py-3.5 px-4">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            deal.deal_type === 'poc' ? "bg-amber-50 text-amber-800" : "bg-teal-50 text-teal-800"
-                          }`}>
-                            {deal.deal_type === 'poc' ? 'POC' : 'Full Contract'}
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${DEAL_TYPE_BG_TEXT_CLASSES[deal.deal_type] || DEAL_TYPE_BG_TEXT_CLASSES.full_contract}`}>
+                            {DEAL_TYPE_LABELS[deal.deal_type] || deal.deal_type}
                           </span>
                         </td>
                         <td className="py-3.5 px-4 font-bold text-foreground">{formatDealValue(deal.reported_value)}</td>

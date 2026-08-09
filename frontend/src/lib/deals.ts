@@ -1,12 +1,22 @@
 import { supabase } from './accounts'
 
+export const DEAL_TYPE_LABELS: Record<string, string> = {
+  poc: 'Pilot',
+  half_year_contract: 'Half Year Contract',
+  full_contract: '1 Year Contract',
+}
+
+export function dealTypeHasUpsell(dealType: string): boolean {
+  return dealType === 'poc' || dealType === 'half_year_contract'
+}
+
 export type Deal = {
   id: string
   account_id: string | null
   lead_id: string | null
   originating_deal_id: string | null
   opportunity_name: string
-  deal_type: 'poc' | 'full_contract'
+  deal_type: 'poc' | 'half_year_contract' | 'full_contract'
   stage: 'proposal_submitted' | 'negotiation' | 'closed_won' | 'closed_lost' | 'on_hold'
   reported_value: number
   potential_full_contract_value: number | null
@@ -215,7 +225,7 @@ export async function updateDealStage(
     })
   if (histErr) throw histErr
 
-  const showConversionPrompt = newStage === 'closed_won' && currentDeal.deal_type === 'poc'
+  const showConversionPrompt = newStage === 'closed_won' && dealTypeHasUpsell(currentDeal.deal_type)
 
   return {
     deal: updatedDeal as Deal,
