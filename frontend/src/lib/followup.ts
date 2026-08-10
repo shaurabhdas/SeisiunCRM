@@ -1,14 +1,53 @@
+// The timezone the business actually operates in. All "today"/"this week"/etc.
+// boundaries are anchored here rather than to the runtime's local timezone —
+// Vercel's Node functions run with TZ=UTC, so anchoring to server-local time
+// flips "today" over at 8pm Eastern instead of midnight, silently
+// reclassifying same-day records (activity_date, close_date, created_at) into
+// the wrong period for several hours around every UTC day boundary.
+const BUSINESS_TIMEZONE = 'America/New_York'
+
+// Wall-clock Y/M/D/H/M/S for `date` as seen in `timeZone`.
+function zonedParts(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(date)
+  const map: Record<string, string> = {}
+  for (const p of parts) map[p.type] = p.value
+  return {
+    year: Number(map.year), month: Number(map.month), day: Number(map.day),
+    hour: Number(map.hour), minute: Number(map.minute), second: Number(map.second)
+  }
+}
+
+// The real UTC instant corresponding to a wall-clock date/time in `timeZone`.
+function zonedToUtc(year: number, month: number, day: number, hour: number, minute: number, second: number, ms: number, timeZone: string): Date {
+  const guess = Date.UTC(year, month - 1, day, hour, minute, second, ms)
+  const seenInZone = zonedParts(new Date(guess), timeZone)
+  const seenAsUtc = Date.UTC(seenInZone.year, seenInZone.month - 1, seenInZone.day, seenInZone.hour, seenInZone.minute, seenInZone.second, ms)
+  return new Date(guess - (seenAsUtc - guess))
+}
+
+// Adds `deltaDays` calendar days to a Y/M/D triple (pure calendar math, no timezone/instant involved).
+function addCalendarDays(year: number, month: number, day: number, deltaDays: number) {
+  const d = new Date(Date.UTC(year, month - 1, day))
+  d.setUTCDate(d.getUTCDate() + deltaDays)
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() }
+}
+
+function calendarWeekday(year: number, month: number, day: number): number {
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+}
+
 export function calculateDaysSinceContact(
   lastConnectDate: string | null
 ): number | null {
   if (!lastConnectDate) return null
   const dateOnly = lastConnectDate.split('T')[0]
-  const today = new Date()
-  const todayUTC = Date.UTC(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  )
+  const today = zonedParts(new Date(), BUSINESS_TIMEZONE)
+  const todayUTC = Date.UTC(today.year, today.month - 1, today.day)
   const [year, month, day] = dateOnly.split('-').map(Number)
   if (isNaN(year) || isNaN(month) || isNaN(day)) return null
   const lastUTC = Date.UTC(year, month - 1, day)
@@ -18,28 +57,30 @@ export function calculateDaysSinceContact(
 }
 
 export function getTimeframeDates(timeframe: string, referenceDate = new Date()) {
-  const start = new Date(referenceDate)
-  const end = new Date(referenceDate)
-  start.setHours(0, 0, 0, 0)
-  end.setHours(23, 59, 59, 999)
+  const today = zonedParts(referenceDate, BUSINESS_TIMEZONE)
+  let startDate = { year: today.year, month: today.month, day: today.day }
+  let endDate = { year: today.year, month: today.month, day: today.day }
 
   if (timeframe === 'this-week') {
-    const day = start.getDay()
-    const diff = start.getDate() - day + (day === 0 ? -6 : 1)
-    start.setDate(diff)
+    const weekday = calendarWeekday(today.year, today.month, today.day)
+    const diff = -weekday + (weekday === 0 ? -6 : 1)
+    startDate = addCalendarDays(today.year, today.month, today.day, diff)
   } else if (timeframe === 'last-week') {
-    const day = start.getDay()
-    const diffToLastMonday = start.getDate() - day - 6 + (day === 0 ? -6 : 1)
-    start.setDate(diffToLastMonday)
-    end.setDate(start.getDate() + 6)
+    const weekday = calendarWeekday(today.year, today.month, today.day)
+    const diffToLastMonday = -weekday - 6 + (weekday === 0 ? -6 : 1)
+    startDate = addCalendarDays(today.year, today.month, today.day, diffToLastMonday)
+    endDate = addCalendarDays(startDate.year, startDate.month, startDate.day, 6)
   } else if (timeframe === 'month-to-date' || timeframe === 'this-month') {
-    start.setDate(1)
+    startDate = { year: today.year, month: today.month, day: 1 }
   } else if (timeframe === 'this-year') {
-    start.setMonth(0, 1)
+    startDate = { year: today.year, month: 1, day: 1 }
   } else if (timeframe === 'all-time') {
-    start.setTime(new Date(2020, 0, 1).getTime())
+    startDate = { year: 2020, month: 1, day: 1 }
   }
-  // 'today' needs no adjustment - start/end already bracket referenceDate's day
+  // 'today' needs no adjustment - start/end already bracket today's date
+
+  const start = zonedToUtc(startDate.year, startDate.month, startDate.day, 0, 0, 0, 0, BUSINESS_TIMEZONE)
+  const end = zonedToUtc(endDate.year, endDate.month, endDate.day, 23, 59, 59, 999, BUSINESS_TIMEZONE)
 
   return { start, end }
 }
