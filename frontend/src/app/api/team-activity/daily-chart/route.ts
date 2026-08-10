@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getTimeframeDates } from '@/lib/followup'
+import { getRollingDayBuckets } from '@/lib/followup'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,70 +12,38 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const timeframe = searchParams.get('timeframe') || 'this-week'
 
-    const { start, end } = getTimeframeDates(timeframe)
+    // A rolling window ending today (or offset back for 'last-week') instead
+    // of fixed Mon-Sun / week-of-month buckets, which showed an empty chart
+    // every Monday (or 1st of the month) until enough of the new period had
+    // passed to log anything into it.
+    const windowDays = timeframe === 'month-to-date' ? 30 : 7
+    const endOffsetDays = timeframe === 'last-week' ? 7 : 0
+    const buckets = getRollingDayBuckets(windowDays, new Date(), endOffsetDays)
 
     const { data: activities, error: err } = await supabase
       .from('lead_activities')
       .select('*')
-      .gte('activity_date', start.toISOString().split('T')[0])
-      .lte('activity_date', end.toISOString().split('T')[0])
+      .gte('activity_date', buckets[0].date)
+      .lte('activity_date', buckets[buckets.length - 1].date)
 
     if (err) throw err
 
     const acts = activities || []
+    const byDate = new Map(buckets.map(b => [b.date, { name: b.label, emails: 0, calls: 0 }]))
 
-    if (timeframe === 'month-to-date') {
-      // Group by weeks
-      const weeks = [
-        { name: "Wk 1", emails: 0, calls: 0 },
-        { name: "Wk 2", emails: 0, calls: 0 },
-        { name: "Wk 3", emails: 0, calls: 0 },
-        { name: "Wk 4", emails: 0, calls: 0 },
-        { name: "Wk 5", emails: 0, calls: 0 }
-      ]
+    acts.forEach(act => {
+      if (!act.activity_date) return
+      const bucket = byDate.get(act.activity_date.split('T')[0])
+      if (!bucket) return
+      const type = act.activity_type?.toLowerCase()
+      if (type === 'email') {
+        bucket.emails++
+      } else if (type === 'call') {
+        bucket.calls++
+      }
+    })
 
-      acts.forEach(act => {
-        if (!act.activity_date) return
-        const date = new Date(act.activity_date)
-        const dayOfMonth = date.getDate()
-        const weekIndex = Math.min(4, Math.floor((dayOfMonth - 1) / 7))
-        const type = act.activity_type?.toLowerCase()
-        if (type === 'email') {
-          weeks[weekIndex].emails++
-        } else if (type === 'call') {
-          weeks[weekIndex].calls++
-        }
-      })
-
-      // Filter out Week 5 if it has 0 emails and calls
-      const result = weeks.filter((w, idx) => idx < 4 || w.emails > 0 || w.calls > 0)
-      return NextResponse.json(result)
-    } else {
-      // Group by day of week Mon-Sun
-      const days = [
-        { name: "Mon", emails: 0, calls: 0 },
-        { name: "Tue", emails: 0, calls: 0 },
-        { name: "Wed", emails: 0, calls: 0 },
-        { name: "Thu", emails: 0, calls: 0 },
-        { name: "Fri", emails: 0, calls: 0 },
-        { name: "Sat", emails: 0, calls: 0 },
-        { name: "Sun", emails: 0, calls: 0 }
-      ]
-
-      acts.forEach(act => {
-        if (!act.activity_date) return
-        const date = new Date(act.activity_date)
-        const dayIndex = (date.getDay() + 6) % 7
-        const type = act.activity_type?.toLowerCase()
-        if (type === 'email') {
-          days[dayIndex].emails++
-        } else if (type === 'call') {
-          days[dayIndex].calls++
-        }
-      })
-
-      return NextResponse.json(days)
-    }
+    return NextResponse.json(buckets.map(b => byDate.get(b.date)))
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to fetch data', details: error instanceof Error ? error.message : JSON.stringify(error) },

@@ -17,33 +17,6 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 
-const thisWeekData = [
-  { name: "Mon", emails: 28, calls: 18 },
-  { name: "Tue", emails: 85, calls: 42 },
-  { name: "Wed", emails: 30, calls: 12 },
-  { name: "Thu", emails: 72, calls: 48 },
-  { name: "Fri", emails: 55, calls: 38 },
-  { name: "Sat", emails: 60, calls: 86 },
-  { name: "Sun", emails: 85, calls: 50 },
-]
-
-const lastWeekData = [
-  { name: "Mon", emails: 40, calls: 22 },
-  { name: "Tue", emails: 65, calls: 30 },
-  { name: "Wed", emails: 35, calls: 15 },
-  { name: "Thu", emails: 88, calls: 52 },
-  { name: "Fri", emails: 62, calls: 40 },
-  { name: "Sat", emails: 45, calls: 70 },
-  { name: "Sun", emails: 50, calls: 36 },
-]
-
-const monthToDateData = [
-  { name: "Wk 1", emails: 850, calls: 290 },
-  { name: "Wk 2", emails: 1240, calls: 410 },
-  { name: "Wk 3", emails: 1450, calls: 520 },
-  { name: "Wk 4", emails: 1280, calls: 360 },
-]
-
 const chartConfig = {
   emails: {
     label: "Emails Sent",
@@ -56,7 +29,7 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export function TeamDailyChart({ timeframe }: { timeframe: string }) {
-  const [chartData, setChartData] = React.useState(thisWeekData)
+  const [chartData, setChartData] = React.useState<{ name: string; emails: number; calls: number }[]>([])
   const [showEmails, setShowEmails] = React.useState(true)
   const [showCalls, setShowCalls] = React.useState(true)
 
@@ -159,7 +132,7 @@ export function TeamDailyChart({ timeframe }: { timeframe: string }) {
               content={
                 <ChartTooltipContent
                   indicator="dot"
-                  labelFormatter={(label) => `Day: ${label}`}
+                  labelFormatter={(label) => `Date: ${label}`}
                 />
               }
             />

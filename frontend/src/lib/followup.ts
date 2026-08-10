@@ -85,6 +85,26 @@ export function getTimeframeDates(timeframe: string, referenceDate = new Date())
   return { start, end }
 }
 
+// Returns `windowDays` consecutive calendar dates (oldest first), each with
+// its ISO date string and a short "M/D" label, ending `endOffsetDays` days
+// before today (business timezone). Used for daily-activity charts so they
+// always show a meaningful trailing window instead of resetting to an empty
+// chart every time a fixed calendar boundary (Monday, 1st of the month) passes.
+export function getRollingDayBuckets(
+  windowDays: number,
+  referenceDate = new Date(),
+  endOffsetDays = 0
+): { date: string; label: string }[] {
+  const today = zonedParts(referenceDate, BUSINESS_TIMEZONE)
+  const buckets: { date: string; label: string }[] = []
+  for (let i = windowDays - 1; i >= 0; i--) {
+    const d = addCalendarDays(today.year, today.month, today.day, -(i + endOffsetDays))
+    const date = `${d.year}-${String(d.month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`
+    buckets.push({ date, label: `${d.month}/${d.day}` })
+  }
+  return buckets
+}
+
 export function getFollowUpColorToken(days: number | null): string {
   if (days === null) return '--followup-critical'
   if (days >= 10) return '--followup-critical'
