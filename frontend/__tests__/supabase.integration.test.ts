@@ -10,8 +10,11 @@ const supabase = createClient(
     db: {
       schema: process.env.SUPABASE_TEST_SCHEMA || 'test'
     },
+    // See __tests__/setup.ts for why this cast is needed - `ws`'s overloaded
+    // constructor typings don't structurally match realtime-js's expected
+    // single-signature type, even though it works fine here at runtime.
     realtime: {
-      transport: ws
+      transport: ws as any
     }
   }
 )
@@ -44,23 +47,28 @@ describe('Lead insert', () => {
   it('creates a lead with stage contact and open_date set to today', async () => {
     const today = new Date().toISOString().split('T')[0]
 
-    const { data: lead, error } = await supabase
-      .from('leads')
-      .insert({
-        opportunity_name: 'Test Opportunity',
-        account_id: testAccountId,
-        stage: 'contact',
-        open_date: today,
-        forecast_close_date: '2026-12-31',
-        sales_region: 'US East',
-      })
-      .select()
-      .single()
+    // Goes through the real POST /api/leads route (rather than inserting
+    // directly) so the lead ends up in the same state a lead created via
+    // the app would - including the initial lead_stage_history row the
+    // route writes as part of creation, which the next test depends on.
+    const response = await fetch('http://localhost:3000/api/leads', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-supabase-schema': 'test'
+      },
+      body: JSON.stringify({
+        opportunityName: 'Test Opportunity',
+        accountId: testAccountId,
+        forecastCloseDate: '2026-12-31',
+      }),
+    })
 
-    expect(error).toBeNull()
+    expect(response.status).toBe(201)
+    const lead = await response.json()
     expect(lead.stage).toBe('contact')
-    expect(lead.open_date).toBe(today)
-    expect(lead.last_connect_date).toBeNull()
+    expect(lead.openDate).toBe(today)
+    expect(lead.lastConnectDate).toBeNull()
 
     testLeadId = lead.id
   })
@@ -72,9 +80,9 @@ describe('Lead insert', () => {
       .eq('lead_id', testLeadId)
 
     expect(error).toBeNull()
-    expect(history.length).toBe(1)
-    expect(history[0].from_stage).toBeNull()
-    expect(history[0].to_stage).toBe('contact')
+    expect(history!.length).toBe(1)
+    expect(history![0].from_stage).toBeNull()
+    expect(history![0].to_stage).toBe('contact')
   })
 })
 
@@ -133,7 +141,7 @@ describe('Activity insert and last_connect_date trigger', () => {
       .single()
 
     expect(error).toBeNull()
-    expect(lead.last_connect_date).toBe(today)
+    expect(lead!.last_connect_date).toBe(today)
   })
 
   it('updates last_connect_date when a more recent activity is logged', async () => {
@@ -154,25 +162,31 @@ describe('Activity insert and last_connect_date trigger', () => {
       .eq('id', testLeadId)
       .single()
 
-    expect(lead.last_connect_date).toBe(tomorrow)
+    expect(lead!.last_connect_date).toBe(tomorrow)
   })
 })
 
 describe('Stage progression writes to lead_stage_history', () => {
 
   it('records a history row when stage advances from contact to outreach', async () => {
-    await supabase
-      .from('leads')
-      .update({ stage: 'outreach' })
-      .eq('id', testLeadId)
+    // Goes through the real PUT /api/leads/[id]/stage route rather than
+    // updating the row and manually inserting a matching history row -
+    // this exercises the actual transition logic (including its stage-gate
+    // checks) and the history write it performs as a side effect. The
+    // 'email' activity required by the contact -> outreach gate already
+    // exists from the "Activity insert" tests above.
+    const response = await fetch(`http://localhost:3000/api/leads/${testLeadId}/stage`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-supabase-schema': 'test'
+      },
+      body: JSON.stringify({ toStage: 'outreach' }),
+    })
 
-    await supabase
-      .from('lead_stage_history')
-      .insert({
-        lead_id: testLeadId,
-        from_stage: 'contact',
-        to_stage: 'outreach',
-      })
+    expect(response.status).toBe(200)
+    const result = await response.json()
+    expect(result.stage).toBe('outreach')
 
     const { data: history } = await supabase
       .from('lead_stage_history')
@@ -180,9 +194,9 @@ describe('Stage progression writes to lead_stage_history', () => {
       .eq('lead_id', testLeadId)
       .order('changed_at', { ascending: true })
 
-    expect(history.length).toBe(2)
-    expect(history[1].from_stage).toBe('contact')
-    expect(history[1].to_stage).toBe('outreach')
+    expect(history!.length).toBe(2)
+    expect(history![1].from_stage).toBe('contact')
+    expect(history![1].to_stage).toBe('outreach')
   })
 })
 
@@ -206,10 +220,10 @@ describe('Lead delete cascade', () => {
     const { data: lead } = await supabase
       .from('leads').select().eq('id', testLeadId)
 
-    expect(activities.length).toBe(0)
-    expect(contacts.length).toBe(0)
-    expect(history.length).toBe(0)
-    expect(lead.length).toBe(0)
+    expect(activities!.length).toBe(0)
+    expect(contacts!.length).toBe(0)
+    expect(history!.length).toBe(0)
+    expect(lead!.length).toBe(0)
   })
 })
 
@@ -226,13 +240,12 @@ describe('Schema migration verification', () => {
         stage: 'contact',
         open_date: today,
         forecast_close_date: '2026-12-31',
-        sales_region: 'US East',
       })
       .select('deal_value')
       .single()
 
     expect(error).toBeNull()
-    expect(lead.deal_value).toBe(0)
+    expect(lead!.deal_value).toBe(0)
 
     const { data: lead1 } = await supabase.from('leads').select('id').eq('opportunity_name', 'Deal Value Test Lead').single()
     if (lead1) {
@@ -252,7 +265,6 @@ describe('Schema migration verification', () => {
         stage: 'contact',
         open_date: today,
         forecast_close_date: '2026-12-31',
-        sales_region: 'US East',
         deal_value: 350000.00,
       })
       .select()
@@ -280,7 +292,7 @@ describe('Schema migration verification', () => {
       .single()
 
     expect(error).toBeNull()
-    expect(account.notes).toBe('This is a test note for the account.')
+    expect(account!.notes).toBe('This is a test note for the account.')
 
     await supabase.from('accounts').delete().eq('name', 'Notes Test Account')
   })
@@ -297,7 +309,7 @@ describe('Schema migration verification', () => {
       .single()
 
     expect(error).toBeNull()
-    expect(account.notes).toBeNull()
+    expect(account!.notes).toBeNull()
 
     await supabase.from('accounts').delete().eq('name', 'No Notes Test Account')
   })
@@ -312,7 +324,7 @@ describe('Account metrics queries', () => {
       .eq('account_id', testAccountId)
       .neq('stage', 'disqualified')
 
-    expect(leads.length).toBeGreaterThanOrEqual(0)
+    expect(leads!.length).toBeGreaterThanOrEqual(0)
   })
 
   it('correctly sums deal value across active leads', async () => {
@@ -331,7 +343,6 @@ describe('Account metrics queries', () => {
         stage: 'demo',
         open_date: new Date().toISOString().split('T')[0],
         forecast_close_date: '2026-12-31',
-        sales_region: 'US East',
         deal_value: 200000,
       },
       {
@@ -340,7 +351,6 @@ describe('Account metrics queries', () => {
         stage: 'presentation',
         open_date: new Date().toISOString().split('T')[0],
         forecast_close_date: '2026-12-31',
-        sales_region: 'US East',
         deal_value: 150000,
       },
     ])
@@ -351,7 +361,7 @@ describe('Account metrics queries', () => {
       .eq('account_id', testAccountId)
       .neq('stage', 'disqualified')
 
-    const total = leads.reduce((sum, l) => sum + Number(l.deal_value), 0)
+    const total = leads!.reduce((sum, l) => sum + Number(l.deal_value), 0)
     expect(total).toBe(350000)
 
     const { data: leadsToDelete } = await supabase.from('leads').select('id').eq('account_id', testAccountId)
@@ -371,7 +381,6 @@ describe('Account metrics queries', () => {
         account_id: testAccountId,
         stage: 'connected',
         open_date: new Date().toISOString().split('T')[0],
-        sales_region: 'US East',
       })
       .select()
       .single()
@@ -396,7 +405,7 @@ describe('Account metrics queries', () => {
       .select('stakeholder_role')
       .eq('account_id', testAccountId)
 
-    const hasChampion = contacts.some(c => c.stakeholder_role === 'champion')
+    const hasChampion = contacts!.some(c => c.stakeholder_role === 'champion')
     expect(hasChampion).toBe(true)
 
     // 4. Clean up contacts and the temp lead
@@ -458,7 +467,6 @@ describe('fetchAccountsWithMetrics: deduplication and activity integrity', () =>
         stage: 'connected',
         open_date: today,
         forecast_close_date: '2026-12-31',
-        sales_region: 'US East',
       })
       .select()
       .single()
@@ -474,7 +482,6 @@ describe('fetchAccountsWithMetrics: deduplication and activity integrity', () =>
         stage: 'outreach',
         open_date: today,
         forecast_close_date: '2026-12-31',
-        sales_region: 'US East',
       })
       .select()
       .single()
@@ -539,7 +546,6 @@ describe('fetchAccountsWithMetrics: deduplication and activity integrity', () =>
         stage: 'demo',
         open_date: today,
         forecast_close_date: '2026-12-31',
-        sales_region: 'US West',
       })
       .select()
       .single()
@@ -644,9 +650,9 @@ describe('Deals schema verification', () => {
       .eq('deal_id', testDealId)
 
     expect(error).toBeNull()
-    expect(history.length).toBe(1)
-    expect(history[0].from_stage).toBeNull()
-    expect(history[0].to_stage).toBe('proposal_submitted')
+    expect(history!.length).toBe(1)
+    expect(history![0].from_stage).toBeNull()
+    expect(history![0].to_stage).toBe('proposal_submitted')
   })
 
   it('creates a deal activity linked to the deal', async () => {
@@ -733,8 +739,8 @@ describe('Deals schema verification', () => {
       .select()
       .eq('deal_id', tempDeal.id)
 
-    expect(activities.length).toBe(0)
-    expect(history.length).toBe(0)
+    expect(activities!.length).toBe(0)
+    expect(history!.length).toBe(0)
   })
 })
 
@@ -922,7 +928,6 @@ describe('Auth schema verification', () => {
         stage: 'contact',
         open_date: today,
         forecast_close_date: '2026-12-31',
-        sales_region: 'US East',
         needs_reassignment: false,
         assigned_rep_name: 'Test Rep',
       })
@@ -930,8 +935,8 @@ describe('Auth schema verification', () => {
       .single()
 
     expect(error).toBeNull()
-    expect(lead.needs_reassignment).toBe(false)
-    expect(lead.assigned_rep_name).toBe('Test Rep')
+    expect(lead!.needs_reassignment).toBe(false)
+    expect(lead!.assigned_rep_name).toBe('Test Rep')
 
     await supabase.from('leads').delete().eq('opportunity_name', 'Auth Schema Test Lead')
   })
@@ -950,15 +955,15 @@ describe('Auth schema verification', () => {
         needs_reassignment: false,
         assigned_rep_name: 'Test Rep',
       })
-      .select('needs_reassignment, assigned_rep_name')
+      .select('id, needs_reassignment, assigned_rep_name')
       .single()
 
     expect(error).toBeNull()
-    expect(deal.needs_reassignment).toBe(false)
-    expect(deal.assigned_rep_name).toBe('Test Rep')
+    expect(deal!.needs_reassignment).toBe(false)
+    expect(deal!.assigned_rep_name).toBe('Test Rep')
 
-    await supabase.from('deal_stage_history').delete().eq('deal_id', deal.id)
-    await supabase.from('deals').delete().eq('id', deal.id)
+    await supabase.from('deal_stage_history').delete().eq('deal_id', deal!.id)
+    await supabase.from('deals').delete().eq('id', deal!.id)
   })
 })
 
@@ -1024,7 +1029,6 @@ describe('Tasks schema and operations', () => {
         stage: 'contact',
         open_date: today,
         forecast_close_date: '2026-12-31',
-        sales_region: 'US East',
       })
       .select()
       .single()
@@ -1086,7 +1090,7 @@ describe('Tasks schema and operations', () => {
       .select()
       .eq('id', task.id)
 
-    expect(check.length).toBe(0)
+    expect(check!.length).toBe(0)
   })
 })
 

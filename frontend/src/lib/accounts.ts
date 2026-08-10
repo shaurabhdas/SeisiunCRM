@@ -55,8 +55,21 @@ if (typeof window === 'undefined') {
   getDynamicSchema = () => {
     const p = process as any
     const storage = p.__schemaStorage
-    console.log("SCHEMA STORAGE ATTEMPT:", storage ? "EXISTS" : "MISSING", "STORE:", storage?.getStore())
-    return storage?.getStore() || supabaseSchema
+    const requested = storage?.getStore()
+    // 'x-supabase-schema: test' is a signal meaning "this is a test-harness
+    // request" (middleware.ts uses the same header to bypass auth) — it is
+    // not necessarily a literal Postgres schema name. This project only
+    // exposes 'public' and 'graphql_public' via PostgREST (the dedicated
+    // test project/schema this originally targeted no longer exists), so
+    // resolve it to the schema the integration suite actually seeds data
+    // into. SUPABASE_TEST_SCHEMA isn't loaded into this process (only into
+    // vitest's via .env.test), so the fallback must match reality directly
+    // rather than passing 'test' straight through and having every query
+    // on it fail with "Invalid schema: test".
+    if (requested === 'test') {
+      return process.env.SUPABASE_TEST_SCHEMA || 'public'
+    }
+    return requested || supabaseSchema
   }
 }
 
