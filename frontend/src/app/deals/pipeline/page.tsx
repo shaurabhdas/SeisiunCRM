@@ -755,7 +755,7 @@ function PipelinePageContent() {
       {/* Zone B: Kanban Board Grid */}
       <div className="@container/main flex flex-1 flex-col gap-2 mt-6">
         <div className="px-4 lg:px-6">
-          <div className={`flex gap-4 transition-all duration-300 ${selectedDealId ? "w-2/3" : "w-full"}`}>
+          <div className={`flex gap-4 overflow-x-auto pb-2 transition-all duration-300 ${selectedDealId ? "lg:w-2/3" : "w-full"}`}>
             {columnsList.map(col => {
               const colDeals = deals.filter(d => d.stage === col.id)
               const totalVal = colDeals.reduce((sum, d) => sum + Number(d.reported_value || 0), 0)
@@ -882,7 +882,7 @@ function PipelinePageContent() {
 
       {/* Zone C: Deal Detail Panel (Slides-in split panel) */}
       {selectedDealId && selectedDeal && (
-        <div className="fixed top-24 right-4 w-1/3 border-l bg-card p-6 h-[calc(100vh-var(--header-height)-3rem)] overflow-y-auto rounded-r-xl shadow-lg z-30 animate-slide-in">
+        <div className="fixed top-24 inset-x-4 lg:inset-x-auto lg:right-4 w-auto lg:w-1/3 border-l bg-card p-6 h-[calc(100vh-var(--header-height)-3rem)] overflow-y-auto rounded-xl lg:rounded-r-xl shadow-lg z-30 animate-slide-in">
           
           {/* Header Actions */}
           <div className="flex items-center justify-between border-b pb-4 mb-4">

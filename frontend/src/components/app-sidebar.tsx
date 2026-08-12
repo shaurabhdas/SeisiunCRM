@@ -168,7 +168,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
 
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="border-b border-sidebar-border/40 p-2">
         <SidebarMenu>
           <SidebarMenuItem>
@@ -176,11 +176,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg">
                 <img src="/seisiun-logo.png" alt="Seisiun Logo" className="size-full object-cover" />
               </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
+              <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                 <span className="truncate font-semibold text-foreground">Seisiun CRM</span>
                 <span className="truncate text-xs text-muted-foreground">Revenue team</span>
               </div>
-              <ChevronsUpDown className="ml-auto size-4 text-muted-foreground/75" />
+              <ChevronsUpDown className="ml-auto size-4 text-muted-foreground/75 group-data-[collapsible=icon]:hidden" />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -201,45 +201,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {item.collapsible ? (
                     <div className="flex flex-col w-full">
                       {(() => {
-                        const href = item.title === "Dashboard" 
-                          ? "/dashboard" 
-                          : item.title === "Deals" 
-                          ? "/deals/pipeline" 
+                        const href = item.title === "Dashboard"
+                          ? "/dashboard"
+                          : item.title === "Deals"
+                          ? "/deals/pipeline"
                           : item.title === "Settings"
                           ? (profile?.role === 'super_admin' ? "/settings/users" : "/settings/profile")
                           : undefined
-                        const content = (
-                          <>
-                            <Icon className="size-4 shrink-0" />
-                            <span className="flex-1">{item.title}</span>
-                            {isOpen ? (
-                              <ChevronDown className="size-4 text-muted-foreground/75 shrink-0" />
-                            ) : (
-                              <ChevronRight className="size-4 text-muted-foreground/75 shrink-0" />
-                            )}
-                          </>
+                        const chevron = isOpen ? (
+                          <ChevronDown className="size-4 text-muted-foreground/75 shrink-0 group-data-[collapsible=icon]:hidden" />
+                        ) : (
+                          <ChevronRight className="size-4 text-muted-foreground/75 shrink-0 group-data-[collapsible=icon]:hidden" />
                         )
-                        const className = "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                        
-                        if (href) {
-                          return (
-                            <Link
-                              href={href}
-                              onClick={() => toggleItem(item.title)}
-                              className={className}
-                            >
-                              {content}
-                            </Link>
-                          )
-                        }
 
                         return (
-                          <button
+                          <SidebarMenuButton
+                            tooltip={item.title}
                             onClick={() => toggleItem(item.title)}
-                            className={className}
+                            render={href ? <Link href={href} /> : <button type="button" />}
                           >
-                            {content}
-                          </button>
+                            <Icon className="size-4 shrink-0" />
+                            <span className="flex-1">{item.title}</span>
+                            {chevron}
+                          </SidebarMenuButton>
                         )
                       })()}
                       {isOpen && hasSubItems && (
@@ -280,11 +264,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <AvatarImage src={displayAvatar} alt={displayName} />
                       <AvatarFallback className="rounded-full bg-sidebar-primary text-sidebar-primary-foreground font-semibold text-xs">{displayInitials}</AvatarFallback>
                     </Avatar>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
+                    <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                       <span className="truncate font-medium text-foreground">{displayName}</span>
                       <span className="truncate text-xs text-muted-foreground">{displayEmail}</span>
                     </div>
-                    <ChevronsUpDown className="ml-auto size-4 text-muted-foreground/75" />
+                    <ChevronsUpDown className="ml-auto size-4 text-muted-foreground/75 group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 }
               />

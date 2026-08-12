@@ -73,15 +73,15 @@ export default function Page() {
               
               {/* Bottom Multi-Column Layout */}
               <div className="px-4 lg:px-6">
-                <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr_0.85fr]">
                   {/* Left Column: Line Chart and Leaderboard */}
-                  <div className="space-y-6">
+                  <div className="min-w-0 space-y-6">
                     <TeamDailyChart timeframe={timeframe} />
                     <TeamLeaderboard timeframe={timeframe} />
                   </div>
-                  
+
                   {/* Right Column: Actionable Dormant Accounts Panel */}
-                  <div>
+                  <div className="min-w-0">
                     <DormantAccounts />
                   </div>
                 </div>
