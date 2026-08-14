@@ -481,7 +481,6 @@ export default function ContactsPage() {
                       <th className="p-3">Deal</th>
                       <th className="p-3">Added By</th>
                       <th className="p-3" />
-                      <th className="p-3" />
                     </tr>
                   </thead>
                   <tbody>
@@ -537,25 +536,25 @@ export default function ContactsPage() {
                           </td>
                           <td className="p-3 text-muted-foreground max-w-28">{c.createdByName || "-"}</td>
                           <td className="p-3">
-                            {permission !== "none" && (
-                              <button
-                                onClick={() => { setEditForm(recordToForm(c)); setEditingContact(c) }}
-                                className="flex items-center gap-1 text-3xs font-semibold text-foreground hover:underline whitespace-nowrap"
-                                title={permission === "associations" ? "You can update the Lead/Account/Deal links" : "Edit contact"}
-                              >
-                                <Pencil className="size-3" /> Edit
-                              </button>
-                            )}
-                          </td>
-                          <td className="p-3">
-                            {isManagerOrAbove && (
-                              <button
-                                onClick={() => setDeleteTarget(c)}
-                                className="flex items-center gap-1 text-3xs font-semibold text-(--destructive) hover:underline whitespace-nowrap"
-                              >
-                                <Trash2 className="size-3" /> Delete
-                              </button>
-                            )}
+                            <div className="flex items-center gap-3 whitespace-nowrap">
+                              {permission !== "none" && (
+                                <button
+                                  onClick={() => { setEditForm(recordToForm(c)); setEditingContact(c) }}
+                                  className="flex items-center gap-1 text-3xs font-semibold text-foreground hover:underline"
+                                  title={permission === "associations" ? "You can update the Lead/Account/Deal links" : "Edit contact"}
+                                >
+                                  <Pencil className="size-3" /> Edit
+                                </button>
+                              )}
+                              {isManagerOrAbove && (
+                                <button
+                                  onClick={() => setDeleteTarget(c)}
+                                  className="flex items-center gap-1 text-3xs font-semibold text-(--destructive) hover:underline"
+                                >
+                                  <Trash2 className="size-3" /> Delete
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       )
