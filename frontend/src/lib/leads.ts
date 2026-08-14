@@ -2,13 +2,18 @@ export function camelCaseContact(c: any) {
   if (!c) return null
   return {
     id: c.id,
+    name: c.name || [c.first_name, c.last_name].filter(Boolean).join(' ') || null,
     firstName: c.first_name,
     lastName: c.last_name,
     email: c.email,
     phone: c.phone,
+    organization: c.organization,
     leadId: c.lead_id,
     accountId: c.account_id,
+    dealId: c.deal_id,
     stakeholderRole: c.stakeholder_role,
+    createdBy: c.created_by,
+    createdByName: c.created_by_name,
     createdAt: c.created_at
   }
 }

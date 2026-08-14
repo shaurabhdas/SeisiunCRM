@@ -124,6 +124,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: "/leads",
     },
     {
+      title: "Contacts",
+      icon: Contact,
+      collapsible: false,
+      url: "/contacts",
+    },
+    {
       title: "Accounts",
       icon: Building2,
       collapsible: false,

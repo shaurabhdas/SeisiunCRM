@@ -1193,3 +1193,131 @@ describe('Email schema verification', () => {
     expect(error).toBeTruthy()
   })
 })
+
+describe('Contacts standalone page', () => {
+  let testDealId: string
+  let testContactId: string
+
+  beforeAll(async () => {
+    const { data: deal, error } = await supabase
+      .from('deals')
+      .insert({
+        account_id: testAccountId,
+        opportunity_name: 'Test Contacts Deal',
+        deal_type: 'poc',
+        reported_value: 10000,
+        value_confidence: 'estimated',
+        stage: 'proposal_submitted',
+        sales_region: 'US East',
+      })
+      .select()
+      .single()
+
+    expect(error).toBeNull()
+    testDealId = deal.id
+  })
+
+  afterAll(async () => {
+    if (testContactId) await supabase.from('contacts').delete().eq('id', testContactId)
+    if (testDealId) await supabase.from('deals').delete().eq('id', testDealId)
+  })
+
+  it('creates a contact through the API with only a partial set of fields', async () => {
+    // All 8 contact fields are optional - a rep may only know an org and an
+    // email when they first log a contact.
+    const response = await fetch('http://localhost:3000/api/contacts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-supabase-schema': 'test'
+      },
+      body: JSON.stringify({
+        organization: 'Partial Fields Inc',
+        email: 'partial@example.com',
+      }),
+    })
+
+    expect(response.status).toBe(201)
+    const contact = await response.json()
+    expect(contact.organization).toBe('Partial Fields Inc')
+    expect(contact.email).toBe('partial@example.com')
+    expect(contact.name).toBeNull()
+    expect(contact.leadId).toBeNull()
+    testContactId = contact.id
+  })
+
+  it('links the contact to a lead, account, and deal and traces back through GET', async () => {
+    const putRes = await fetch(`http://localhost:3000/api/contacts/${testContactId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-supabase-schema': 'test'
+      },
+      body: JSON.stringify({
+        leadId: testLeadId,
+        accountId: testAccountId,
+        dealId: testDealId,
+      }),
+    })
+    expect(putRes.status).toBe(200)
+
+    const listRes = await fetch('http://localhost:3000/api/contacts', {
+      headers: { 'x-supabase-schema': 'test' },
+    })
+    expect(listRes.status).toBe(200)
+    const contacts = await listRes.json()
+    const found = contacts.find((c: any) => c.id === testContactId)
+
+    expect(found).toBeDefined()
+    expect(found.lead.opportunityName).toBe('Test Opportunity')
+    expect(found.account.id).toBe(testAccountId)
+    expect(found.deal.opportunityName).toBe('Test Contacts Deal')
+  })
+
+  it('lets a manager/super_admin edit every field, not just associations', async () => {
+    // The test harness always authenticates as the mock super_admin (see
+    // lib/auth.ts), so this exercises the "full" branch of PUT
+    // /api/contacts/[id]. The complementary "creator gets association-fields
+    // -only" and "neither creator nor manager gets 403" branches are covered
+    // at the unit level in contacts.test.ts (restrictToAssociationFields),
+    // since the test fixture has no way to authenticate as a second,
+    // non-manager identity over real HTTP.
+    const res = await fetch(`http://localhost:3000/api/contacts/${testContactId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-supabase-schema': 'test'
+      },
+      body: JSON.stringify({
+        name: 'Updated Name',
+        organization: 'Updated Org',
+        stakeholderRole: 'economic_buyer',
+      }),
+    })
+    expect(res.status).toBe(200)
+    const updated = await res.json()
+    expect(updated.name).toBe('Updated Name')
+    expect(updated.organization).toBe('Updated Org')
+    expect(updated.stakeholderRole).toBe('economic_buyer')
+  })
+
+  it('lets a manager/super_admin delete a contact', async () => {
+    // Same test-identity caveat as the edit test above: this only exercises
+    // the "allowed" branch of DELETE /api/contacts/[id]. There is no
+    // fixture for asserting a non-manager gets 403 on delete over real HTTP.
+    const res = await fetch(`http://localhost:3000/api/contacts/${testContactId}`, {
+      method: 'DELETE',
+      headers: { 'x-supabase-schema': 'test' },
+    })
+    expect(res.status).toBe(200)
+
+    const { data: remaining } = await supabase
+      .from('contacts')
+      .select('id')
+      .eq('id', testContactId)
+    expect(remaining!.length).toBe(0)
+
+    // Already deleted via the route above - afterAll's cleanup becomes a safe no-op.
+    testContactId = ''
+  })
+})
