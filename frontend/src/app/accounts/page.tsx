@@ -1091,10 +1091,10 @@ function AccountsPageContent() {
                                 </div>
                                 <div className="flex items-center gap-3 text-3xs font-medium text-muted-foreground mt-1">
                                   {contact.email && (
-                                    <a href={`mailto:${contact.email}`} className="hover:text-foreground flex items-start gap-1 min-w-0">
+                                    <Link href={`/email?to=${encodeURIComponent(contact.email)}`} className="hover:text-foreground flex items-start gap-1 min-w-0">
                                       <Mail className="size-3 shrink-0 mt-0.5" />
                                       <span className="break-words">{contact.email}</span>
-                                    </a>
+                                    </Link>
                                   )}
                                   {contact.phone && (
                                     <a href={`tel:${contact.phone}`} className="hover:text-foreground flex items-center gap-1">

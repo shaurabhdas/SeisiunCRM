@@ -7,6 +7,7 @@ export type TagOption = {
   label: string
   value: string
   sublabel?: string
+  firstName?: string
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -65,12 +66,17 @@ export function TagInput({
     onChange(selected.filter(s => s.value !== value))
   }
 
+  // A typed email that happens to match a known contact should carry that
+  // contact's name/firstName, same as picking it from the dropdown would.
+  const resolveTag = (raw: string): TagOption =>
+    options.find(o => o.value.toLowerCase() === raw.toLowerCase()) || { label: raw, value: raw }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if ((e.key === "Enter" || e.key === ",") && allowFreeform) {
       e.preventDefault()
       const trimmed = query.trim().replace(/,$/, "")
       if (trimmed && EMAIL_PATTERN.test(trimmed)) {
-        addTag({ label: trimmed, value: trimmed })
+        addTag(resolveTag(trimmed))
       }
     } else if (e.key === "Backspace" && !query && selected.length > 0) {
       removeTag(selected[selected.length - 1].value)
@@ -83,7 +89,7 @@ export function TagInput({
     if (suppressBlurRef.current) return
     const trimmed = queryRef.current.trim()
     if (allowFreeform && trimmed && EMAIL_PATTERN.test(trimmed)) {
-      addTag({ label: trimmed, value: trimmed })
+      addTag(resolveTag(trimmed))
     }
     setShowDropdown(false)
   }

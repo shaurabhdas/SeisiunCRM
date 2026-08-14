@@ -4,7 +4,7 @@ import { requireAuth } from '@/lib/auth'
 import { getValidAccessToken, sendEmailViaGraph } from '@/lib/microsoft-graph'
 import { sanitizeEmailHtml } from '@/lib/sanitize-html'
 
-type Recipient = { email: string; name?: string }
+type Recipient = { email: string; name?: string; firstName?: string }
 
 function substituteVariables(html: string, vars: Record<string, string>) {
   let result = html
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       const substitutedBody = sanitizeEmailHtml(substituteVariables(bodyHtml, {
         rep_name: authUser.full_name,
         company_name: 'Seisiun Analytics',
-        prospect_name: toRecipients[0]?.name || '',
+        prospect_name: toRecipients[0]?.firstName || '',
         prospect_company: '',
       }))
 

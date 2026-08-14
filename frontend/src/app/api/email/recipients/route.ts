@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
         })
         .map((c: any) => ({
           name: `${c.first_name} ${c.last_name}`.trim(),
+          firstName: c.first_name || "",
           email: c.email,
           accountId: c.account_id,
         }))

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import {
   AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Paperclip,
   Upload, Library, X, Eye, Loader2, PenLine,
@@ -40,6 +41,7 @@ export function ComposeTab({
   outlookEmail: string | null
   onSent: () => void
 }) {
+  const searchParams = useSearchParams()
   const [to, setTo] = React.useState<TagOption[]>(emptyState.to)
   const [cc, setCc] = React.useState<TagOption[]>(emptyState.cc)
   const [showCC, setShowCC] = React.useState(false)
@@ -101,9 +103,17 @@ export function ComposeTab({
           if (sig) setBody(prev => prev || withSignature(sig))
         }
 
+        let matchedContacts: TagOption[] = []
         if (recipientsRes.ok) {
           const contacts = await recipientsRes.json()
-          setContactOptions(contacts.map((c: any) => ({ label: c.name, value: c.email, sublabel: c.email })))
+          matchedContacts = contacts.map((c: any) => ({ label: c.name, value: c.email, sublabel: c.email, firstName: c.firstName }))
+          setContactOptions(matchedContacts)
+        }
+
+        const prefillEmail = searchParams.get("to")
+        if (prefillEmail) {
+          const match = matchedContacts.find(c => c.value === prefillEmail)
+          setTo([match || { label: prefillEmail, value: prefillEmail }])
         }
 
         if (leadsRes.ok) {
@@ -127,6 +137,7 @@ export function ComposeTab({
       }
     }
     loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const resetComposer = () => {
@@ -211,7 +222,7 @@ export function ComposeTab({
 
   // Variable preview values
   const firstToContactMatch = to.length > 0 ? contactOptions.find(c => c.value === to[0].value) : null
-  const prospectName = to.length > 0 ? (firstToContactMatch ? to[0].label : null) : null
+  const prospectName = firstToContactMatch?.firstName || null
   const prospectCompany = linkedAccounts.length > 0 ? linkedAccounts[0].label : null
 
   const previewVars = {
@@ -236,7 +247,7 @@ export function ComposeTab({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          toRecipients: to.map(t => ({ email: t.value, name: t.label !== t.value ? t.label : undefined })),
+          toRecipients: to.map(t => ({ email: t.value, name: t.label !== t.value ? t.label : undefined, firstName: t.firstName })),
           ccRecipients: cc.map(t => ({ email: t.value })),
           subject,
           bodyHtml: body,
@@ -355,7 +366,7 @@ export function ComposeTab({
           <div>
             <label className="text-3xs uppercase font-bold text-muted-foreground">Body</label>
             <div className="mt-1">
-              <RichTextEditor value={body} onChange={setBody} placeholder="Write your email..." />
+              <RichTextEditor value={body} onChange={setBody} placeholder="Write your email..." vars={previewVars} />
             </div>
           </div>
 

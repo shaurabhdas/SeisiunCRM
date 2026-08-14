@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -1651,9 +1652,9 @@ function LeadsPageContent() {
                             </div>
                             <div className="flex flex-col gap-1 text-2xs text-muted-foreground">
                               {c.email && (
-                                <a href={`mailto:${c.email}`} className="flex items-start gap-1 hover:underline min-w-0">
+                                <Link href={`/email?to=${encodeURIComponent(c.email)}`} className="flex items-start gap-1 hover:underline min-w-0">
                                   <Mail className="size-3 shrink-0 mt-0.5" /> <span className="break-words">{c.email}</span>
-                                </a>
+                                </Link>
                               )}
                               {c.phone && (
                                 <a href={`tel:${c.phone}`} className="flex items-center gap-1 hover:underline">

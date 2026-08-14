@@ -83,12 +83,19 @@ export default function EmailPage() {
             </TabsList>
 
             <TabsContent value="compose" className="mt-4">
-              <ComposeTab
-                currentUser={currentUser}
-                outlookConnected={outlookConnected}
-                outlookEmail={outlookEmail}
-                onSent={refreshOutlookStatus}
-              />
+              <React.Suspense fallback={
+                <div className="flex items-center justify-center py-12 text-xs text-muted-foreground gap-2">
+                  <Loader2 className="size-4 animate-spin text-(--primary)" />
+                  Loading Compose...
+                </div>
+              }>
+                <ComposeTab
+                  currentUser={currentUser}
+                  outlookConnected={outlookConnected}
+                  outlookEmail={outlookEmail}
+                  onSent={refreshOutlookStatus}
+                />
+              </React.Suspense>
             </TabsContent>
 
             <TabsContent value="sent" className="mt-4">

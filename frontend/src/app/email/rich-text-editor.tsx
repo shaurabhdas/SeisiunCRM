@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useEditor, EditorContent, Extension } from "@tiptap/react"
+import type { CommandProps } from "@tiptap/core"
 import StarterKit from "@tiptap/starter-kit"
 import Underline from "@tiptap/extension-underline"
 import Link from "@tiptap/extension-link"
@@ -12,25 +13,75 @@ import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Link as Li
 
 const VARIABLE_PATTERN = /\{\{[a-zA-Z_]+\}\}/g
 
-const VariableHighlight = Extension.create({
+// Displays the resolved value in place of a {{variable}} token (e.g. the
+// matched contact's first name instead of the literal token) without
+// touching the underlying doc, so the token is still there if the
+// recipient changes or the content is reused as a template. Falls back to
+// today's highlighted-token look when nothing resolves yet.
+declare module "@tiptap/core" {
+  interface Commands<ReturnType> {
+    variableHighlight: {
+      setVariableHighlightVars: (vars: Record<string, string>) => ReturnType
+    }
+  }
+  interface Storage {
+    variableHighlight: { vars: Record<string, string> }
+  }
+}
+
+const VariableHighlight = Extension.create<Record<string, never>, { vars: Record<string, string> }>({
   name: "variableHighlight",
+  addStorage() {
+    return { vars: {} }
+  },
+  addCommands() {
+    return {
+      setVariableHighlightVars:
+        (vars: Record<string, string>) =>
+        ({ editor, tr, dispatch }: CommandProps) => {
+          editor.storage.variableHighlight.vars = vars
+          if (dispatch) dispatch(tr)
+          return true
+        },
+    }
+  },
   addProseMirrorPlugins() {
     return [
       new Plugin({
         key: new PluginKey("variableHighlight"),
         props: {
-          decorations(state) {
+          decorations: (state) => {
             const decorations: Decoration[] = []
+            const vars = this.storage.vars
             state.doc.descendants((node, pos) => {
               if (!node.isText || !node.text) return
               for (const match of node.text.matchAll(VARIABLE_PATTERN)) {
                 const start = pos + (match.index ?? 0)
                 const end = start + match[0].length
-                decorations.push(
-                  Decoration.inline(start, end, {
-                    class: "email-var-highlight",
-                  })
-                )
+                const key = match[0].slice(2, -2)
+                const resolved = vars[key]
+                if (resolved) {
+                  decorations.push(Decoration.inline(start, end, { style: "display: none" }))
+                  decorations.push(
+                    Decoration.widget(
+                      start,
+                      () => {
+                        const span = document.createElement("span")
+                        span.className = "email-var-highlight"
+                        span.textContent = resolved
+                        span.contentEditable = "false"
+                        return span
+                      },
+                      { side: 1, key: `var-${key}-${start}` }
+                    )
+                  )
+                } else {
+                  decorations.push(
+                    Decoration.inline(start, end, {
+                      class: "email-var-highlight",
+                    })
+                  )
+                }
               }
             })
             return DecorationSet.create(state.doc, decorations)
@@ -69,10 +120,12 @@ export function RichTextEditor({
   value,
   onChange,
   placeholder,
+  vars,
 }: {
   value: string
   onChange: (html: string) => void
   placeholder?: string
+  vars?: Record<string, string>
 }) {
   const [uploadingImage, setUploadingImage] = React.useState(false)
   const imageInputRef = React.useRef<HTMLInputElement>(null)
@@ -104,6 +157,13 @@ export function RichTextEditor({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, editor])
+
+  React.useEffect(() => {
+    // Re-resolves {{variable}} tokens already in the doc (e.g. after
+    // picking a different To recipient) by re-running decorations, without
+    // touching the underlying content.
+    editor?.commands.setVariableHighlightVars(vars || {})
+  }, [vars, editor])
 
   const handleImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

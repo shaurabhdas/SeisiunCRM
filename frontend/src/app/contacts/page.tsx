@@ -501,9 +501,9 @@ export default function ContactsPage() {
                           </td>
                           <td className="p-3 max-w-56">
                             {c.email ? (
-                              <a href={`mailto:${c.email}`} className="hover:text-foreground text-muted-foreground flex items-start gap-1 break-words">
+                              <Link href={`/email?to=${encodeURIComponent(c.email)}`} className="hover:text-foreground text-muted-foreground flex items-start gap-1 break-words">
                                 <Mail className="size-3 shrink-0 mt-0.5" /> {c.email}
-                              </a>
+                              </Link>
                             ) : "-"}
                           </td>
                           <td className="p-3 whitespace-nowrap">

@@ -10,14 +10,14 @@ import type { CurrentUser } from "./page"
 const SAMPLE_VARS = {
   rep_name: "Sarah Chen",
   company_name: "Seisiun Analytics",
-  prospect_name: "Alex Rivera",
+  prospect_name: "Alex",
   prospect_company: "Acme Corporation",
 }
 
 const VARIABLES_REFERENCE = [
   { key: "rep_name", description: "Your full name from your account" },
   { key: "company_name", description: "Always \"Seisiun Analytics\"" },
-  { key: "prospect_name", description: "The first To recipient's name, if matched to a CRM contact" },
+  { key: "prospect_name", description: "The first To recipient's first name, if matched to a CRM contact" },
   { key: "prospect_company", description: "The linked account's name, if a CRM record is linked" },
 ]
 
