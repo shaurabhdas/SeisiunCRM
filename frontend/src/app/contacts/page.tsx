@@ -500,10 +500,10 @@ export default function ContactsPage() {
                               </span>
                             ) : "-"}
                           </td>
-                          <td className="p-3 max-w-48">
+                          <td className="p-3 max-w-56">
                             {c.email ? (
-                              <a href={`mailto:${c.email}`} className="hover:text-foreground text-muted-foreground flex items-center gap-1 break-all">
-                                <Mail className="size-3 shrink-0" /> {c.email}
+                              <a href={`mailto:${c.email}`} className="hover:text-foreground text-muted-foreground flex items-start gap-1 break-words">
+                                <Mail className="size-3 shrink-0 mt-0.5" /> {c.email}
                               </a>
                             ) : "-"}
                           </td>
