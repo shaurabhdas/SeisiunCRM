@@ -1091,9 +1091,9 @@ function AccountsPageContent() {
                                 </div>
                                 <div className="flex items-center gap-3 text-3xs font-medium text-muted-foreground mt-1">
                                   {contact.email && (
-                                    <a href={`mailto:${contact.email}`} className="hover:text-foreground flex items-center gap-1">
-                                      <Mail className="size-3 shrink-0" />
-                                      {contact.email}
+                                    <a href={`mailto:${contact.email}`} className="hover:text-foreground flex items-start gap-1 min-w-0">
+                                      <Mail className="size-3 shrink-0 mt-0.5" />
+                                      <span className="break-words">{contact.email}</span>
                                     </a>
                                   )}
                                   {contact.phone && (
