@@ -62,15 +62,12 @@ export async function createContact(input: ContactInput, createdBy: string, crea
 }
 
 // Callers must pre-filter `input` to association-only fields for non-manager
-// creators (see canEditContactField in lib/auth.ts) — this function trusts
-// whatever columns are passed in.
+// creators (restrictToAssociationFields below) - this function trusts
+// whatever columns are passed in. contacts has no updated_at column.
 export async function updateContact(id: string, input: ContactInput) {
   const { data, error } = await supabase
     .from('contacts')
-    .update({
-      ...toColumns(input),
-      updated_at: new Date().toISOString(),
-    })
+    .update(toColumns(input))
     .eq('id', id)
     .select()
     .single()
