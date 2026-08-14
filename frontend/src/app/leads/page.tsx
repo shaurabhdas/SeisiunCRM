@@ -1473,9 +1473,9 @@ function LeadsPageContent() {
                         </div>
 
                         {/* Assigned Rep */}
-                        <div className="border-t pt-2 mt-2">
+                        <div className="col-span-2 border-t pt-2 mt-2">
                           <p className="text-3xs font-bold uppercase text-muted-foreground">Assigned Rep</p>
-                          <div className="mt-0.5 text-foreground flex items-center justify-between gap-2 relative">
+                          <div className="mt-0.5 text-foreground flex items-start justify-between gap-2 relative">
                             <span>
                               {selectedLead.assignedRepName ? (
                                 selectedLead.assignedRepName
@@ -1651,13 +1651,13 @@ function LeadsPageContent() {
                             </div>
                             <div className="flex flex-col gap-1 text-2xs text-muted-foreground">
                               {c.email && (
-                                <a href={`mailto:${c.email}`} className="flex items-center gap-1 hover:underline">
-                                  <Mail className="size-3" /> {c.email}
+                                <a href={`mailto:${c.email}`} className="flex items-start gap-1 hover:underline min-w-0">
+                                  <Mail className="size-3 shrink-0 mt-0.5" /> <span className="break-words">{c.email}</span>
                                 </a>
                               )}
                               {c.phone && (
                                 <a href={`tel:${c.phone}`} className="flex items-center gap-1 hover:underline">
-                                  <Phone className="size-3" /> {c.phone}
+                                  <Phone className="size-3 shrink-0" /> {c.phone}
                                 </a>
                               )}
                             </div>
@@ -1750,26 +1750,35 @@ function LeadsPageContent() {
                       </p>
                     ) : (
                       <div className="relative border-l pl-3.5 ml-2.5 space-y-4">
-                        {selectedLead.activities.map(act => (
-                          <div key={act.id} className="relative text-xs">
-                            <span className="absolute -left-6.5 top-0.5 rounded-full border bg-card p-1 text-muted-foreground">
-                              {act.activityType === 'email' && <Mail className="size-2.5" />}
-                              {act.activityType === 'call' && <Phone className="size-2.5" />}
-                              {act.activityType === 'meeting' && <Calendar className="size-2.5" />}
-                              {act.activityType === 'presentation' && <Monitor className="size-2.5" />}
-                              {act.activityType === 'demo' && <Play className="size-2.5" />}
-                            </span>
-                            <div className="flex justify-between">
-                              <p className="font-semibold text-foreground uppercase text-3xs tracking-wider">{act.activityType}</p>
-                              <span className="text-3xs text-muted-foreground font-medium">
-                                {new Date(act.activityDate).toLocaleDateString('en-US', {
-                                  month: 'short', day: 'numeric', timeZone: 'UTC'
-                                })}
+                        {selectedLead.activities.map(act => {
+                          // Activities logged alongside a sent email can carry the full email
+                          // body pasted into the note - the log only needs the summary line.
+                          const noteSummary = act.note
+                            ? act.note.split('\n').map(line => line.trim()).find(Boolean)
+                            : null
+                          return (
+                            <div key={act.id} className="relative text-xs">
+                              <span className="absolute -left-6.5 top-0.5 rounded-full border bg-card p-1 text-muted-foreground">
+                                {act.activityType === 'email' && <Mail className="size-2.5" />}
+                                {act.activityType === 'call' && <Phone className="size-2.5" />}
+                                {act.activityType === 'meeting' && <Calendar className="size-2.5" />}
+                                {act.activityType === 'presentation' && <Monitor className="size-2.5" />}
+                                {act.activityType === 'demo' && <Play className="size-2.5" />}
                               </span>
+                              <div className="flex justify-between">
+                                <p className="font-semibold text-foreground uppercase text-3xs tracking-wider">{act.activityType}</p>
+                                <span className="text-3xs text-muted-foreground font-medium">
+                                  {new Date(act.activityDate).toLocaleDateString('en-US', {
+                                    month: 'short', day: 'numeric', timeZone: 'UTC'
+                                  })}
+                                </span>
+                              </div>
+                              {noteSummary && (
+                                <p className="text-muted-foreground text-2xs mt-1 leading-normal">{noteSummary}</p>
+                              )}
                             </div>
-                            <p className="text-muted-foreground text-2xs mt-1 leading-normal">{act.note}</p>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     )}
                   </div>
