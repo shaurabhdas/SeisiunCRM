@@ -4,7 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import {
   AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Paperclip,
-  Upload, Library, X, Eye, Loader2,
+  Upload, Library, X, Eye, Loader2, PenLine,
 } from "lucide-react"
 import { RichTextEditor } from "./rich-text-editor"
 import { TagInput, TagOption } from "./tag-input"
@@ -73,19 +73,33 @@ export function ComposeTab({
   const [sendError, setSendError] = React.useState<string | null>(null)
   const [successBanner, setSuccessBanner] = React.useState<string | null>(null)
 
+  const [signatureHtml, setSignatureHtml] = React.useState("")
+  const [showSignatureModal, setShowSignatureModal] = React.useState(false)
+  const [signatureDraft, setSignatureDraft] = React.useState("")
+  const [savingSignature, setSavingSignature] = React.useState(false)
+
+  const withSignature = (sig: string) => sig ? `<p></p><p></p>${sig}` : ""
+
   React.useEffect(() => {
     async function loadData() {
       try {
-        const [templatesRes, recipientsRes, leadsRes, dealsRes, accountsRes, attachmentsRes] = await Promise.all([
+        const [templatesRes, recipientsRes, leadsRes, dealsRes, accountsRes, attachmentsRes, signatureRes] = await Promise.all([
           fetch("/api/email/templates"),
           fetch("/api/email/recipients"),
           fetch("/api/leads"),
           fetch("/api/deals"),
           fetch("/api/accounts"),
           fetch("/api/email/attachments"),
+          fetch("/api/settings/signature"),
         ])
 
         if (templatesRes.ok) setTemplates(await templatesRes.json())
+
+        if (signatureRes.ok) {
+          const { signatureHtml: sig } = await signatureRes.json()
+          setSignatureHtml(sig || "")
+          if (sig) setBody(prev => prev || withSignature(sig))
+        }
 
         if (recipientsRes.ok) {
           const contacts = await recipientsRes.json()
@@ -120,7 +134,7 @@ export function ComposeTab({
     setCc([])
     setShowCC(false)
     setSubject("")
-    setBody("")
+    setBody(withSignature(signatureHtml))
     setTemplateId(null)
     setTemplateName(null)
     setSelectedAttachments([])
@@ -130,11 +144,32 @@ export function ComposeTab({
     setCrmExpanded(false)
   }
 
-  const handleWriteNew = () => {
-    setSubject("")
-    setBody("")
-    setTemplateId(null)
-    setTemplateName(null)
+  const openSignatureEditor = () => {
+    setSignatureDraft(signatureHtml)
+    setShowSignatureModal(true)
+  }
+
+  const handleSaveSignature = async () => {
+    setSavingSignature(true)
+    try {
+      const res = await fetch("/api/settings/signature", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signatureHtml: signatureDraft }),
+      })
+      if (!res.ok) throw new Error("Failed to save signature")
+
+      // If the composer still only has the old (or no) signature block and
+      // nothing else typed, swap it for the new one so the change is visible
+      // immediately instead of waiting for the next fresh compose.
+      setBody(prev => (prev === withSignature(signatureHtml) ? withSignature(signatureDraft) : prev))
+      setSignatureHtml(signatureDraft)
+      setShowSignatureModal(false)
+    } catch (err) {
+      console.error("Failed to save signature", err)
+    } finally {
+      setSavingSignature(false)
+    }
   }
 
   const applyTemplate = (template: EmailTemplate) => {
@@ -292,10 +327,10 @@ export function ComposeTab({
           <div className="flex items-center gap-2 pt-1">
             <button
               type="button"
-              onClick={handleWriteNew}
-              className="flex-1 rounded border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
+              onClick={openSignatureEditor}
+              className="flex-1 rounded border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted flex items-center justify-center gap-1.5"
             >
-              Write New Email
+              <PenLine className="size-3.5" /> Signature
             </button>
             <button
               type="button"
@@ -536,6 +571,37 @@ export function ComposeTab({
               {libraryAttachments.length === 0 && (
                 <p className="text-xs text-muted-foreground text-center py-8">No files in the library yet. Upload a PDF to get started.</p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Signature editor modal */}
+      {showSignatureModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-card rounded-xl shadow-lg w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-sm font-bold">Email Signature</h3>
+              <button type="button" onClick={() => setShowSignatureModal(false)}><X className="size-4" /></button>
+            </div>
+            <div className="p-4 overflow-y-auto space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Add your name, title, links, or a logo. This is automatically added to the bottom of every new email you compose.
+              </p>
+              <RichTextEditor value={signatureDraft} onChange={setSignatureDraft} placeholder="Your signature..." />
+            </div>
+            <div className="flex items-center justify-end gap-3 p-4 border-t">
+              <button type="button" onClick={() => setShowSignatureModal(false)} className="text-xs font-semibold text-muted-foreground hover:underline">
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveSignature}
+                disabled={savingSignature}
+                className="rounded bg-(--primary) px-4 py-2 text-xs font-semibold text-(--primary-foreground) hover:bg-neutral-800 flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {savingSignature && <Loader2 className="size-3.5 animate-spin" />} Save Signature
+              </button>
             </div>
           </div>
         </div>

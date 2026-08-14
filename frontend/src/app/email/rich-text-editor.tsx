@@ -5,9 +5,10 @@ import { useEditor, EditorContent, Extension } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import Underline from "@tiptap/extension-underline"
 import Link from "@tiptap/extension-link"
+import Image from "@tiptap/extension-image"
 import { Plugin, PluginKey } from "@tiptap/pm/state"
 import { Decoration, DecorationSet } from "@tiptap/pm/view"
-import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Link as LinkIcon } from "lucide-react"
+import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, Loader2 } from "lucide-react"
 
 const VARIABLE_PATTERN = /\{\{[a-zA-Z_]+\}\}/g
 
@@ -73,12 +74,16 @@ export function RichTextEditor({
   onChange: (html: string) => void
   placeholder?: string
 }) {
+  const [uploadingImage, setUploadingImage] = React.useState(false)
+  const imageInputRef = React.useRef<HTMLInputElement>(null)
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit,
       Underline,
       Link.configure({ openOnClick: false }),
+      Image.configure({ HTMLAttributes: { class: "max-w-full rounded" } }),
       VariableHighlight,
     ],
     content: value,
@@ -99,6 +104,25 @@ export function RichTextEditor({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, editor])
+
+  const handleImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !editor) return
+    setUploadingImage(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetch("/api/email/images", { method: "POST", body: formData })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Image upload failed")
+      editor.chain().focus().setImage({ src: data.url }).run()
+    } catch (err) {
+      console.error("Image upload failed", err)
+    } finally {
+      setUploadingImage(false)
+      if (imageInputRef.current) imageInputRef.current.value = ""
+    }
+  }
 
   if (!editor) return null
 
@@ -130,6 +154,13 @@ export function RichTextEditor({
         >
           <LinkIcon className="size-3.5" />
         </ToolbarButton>
+        <ToolbarButton
+          title="Insert image"
+          onClick={() => imageInputRef.current?.click()}
+        >
+          {uploadingImage ? <Loader2 className="size-3.5 animate-spin" /> : <ImageIcon className="size-3.5" />}
+        </ToolbarButton>
+        <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/gif,image/webp" className="hidden" onChange={handleImageFile} />
       </div>
       <div className="px-3 py-2" data-placeholder={placeholder}>
         <EditorContent editor={editor} />
