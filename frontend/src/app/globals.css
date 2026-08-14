@@ -97,7 +97,7 @@
   --stage-disqualified-bg: #e40014;
   --stage-disqualified-text: #ffffff;
 
-  --followup-safe: #16a34a;
+  --followup-safe: #178a5c;
   --followup-warning: #f59e0b;
   --followup-urgent: #ea580c;
   --followup-critical: #e40014;
@@ -120,6 +120,9 @@
   --industry-logistics-text: #ffffff;
   --industry-general-bg: #f5f5f5;
   --industry-general-text: #404040;
+
+  --brand-accent: #178a5c;
+  --brand-accent-soft: #178a5c14;
 }
 
 .dark {

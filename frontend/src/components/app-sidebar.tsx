@@ -2,9 +2,10 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { signOut } from "@/app/login/actions"
+import { cn } from "@/lib/utils"
 import {
   Sidebar,
   SidebarContent,
@@ -56,8 +57,12 @@ import {
   Mail,
 } from "lucide-react"
 
+const activeItemClass =
+  "data-active:bg-(--brand-accent-soft) data-active:border-l-2 data-active:border-(--brand-accent) data-active:pl-[7px] data-active:font-medium [&[data-active]_svg]:text-(--brand-accent)"
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter()
+  const pathname = usePathname()
   const supabase = createClient()
   const [profile, setProfile] = React.useState<any>(null)
   const [user, setUser] = React.useState<any>(null)
@@ -201,6 +206,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               const Icon = item.icon
               const isOpen = openItems[item.title] ?? false
               const hasSubItems = item.subItems && item.subItems.length > 0
+              const isItemActive = !item.collapsible && pathname === item.url
+              const isGroupActive = item.collapsible && (item.subItems?.some(s => pathname === s.url) ?? false)
 
               return (
                 <SidebarMenuItem key={item.title}>
@@ -225,6 +232,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             tooltip={item.title}
                             onClick={() => toggleItem(item.title)}
                             render={href ? <Link href={href} /> : <button type="button" />}
+                            isActive={isGroupActive}
+                            className={activeItemClass}
                           >
                             <Icon className="size-4 shrink-0" />
                             <span className="flex-1">{item.title}</span>
@@ -236,7 +245,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         <SidebarMenuSub className="mx-2 mt-0.5 border-l border-sidebar-border px-2.5 py-0.5">
                           {item.subItems!.map((sub) => (
                             <SidebarMenuSubItem key={sub.name}>
-                              <SidebarMenuSubButton render={<Link href={sub.url} />}>
+                              <SidebarMenuSubButton
+                                render={<Link href={sub.url} />}
+                                isActive={pathname === sub.url}
+                                className={activeItemClass}
+                              >
                                 {sub.name}
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
@@ -245,7 +258,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       )}
                     </div>
                   ) : (
-                    <SidebarMenuButton tooltip={item.title} render={<Link href={item.url || "#"} />}>
+                    <SidebarMenuButton
+                      tooltip={item.title}
+                      render={<Link href={item.url || "#"} />}
+                      isActive={isItemActive}
+                      className={activeItemClass}
+                    >
                       <Icon className="size-4 shrink-0" />
                       <span>{item.title}</span>
                     </SidebarMenuButton>
