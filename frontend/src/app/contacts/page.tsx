@@ -489,53 +489,53 @@ export default function ContactsPage() {
                       const permission = editPermission(c)
                       return (
                         <tr key={c.id} className="border-b last:border-0 bg-card hover:bg-muted/10 transition-colors">
-                          <td className="p-3 font-semibold text-foreground whitespace-nowrap">
+                          <td className="p-3 font-semibold text-foreground max-w-40">
                             {c.name || <span className="text-muted-foreground/50 italic font-normal">Unnamed</span>}
                           </td>
-                          <td className="p-3 text-foreground">{c.organization || "-"}</td>
-                          <td className="p-3">
+                          <td className="p-3 text-foreground max-w-32">{c.organization || "-"}</td>
+                          <td className="p-3 whitespace-nowrap">
                             {c.stakeholderRole ? (
                               <span className="rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400 text-3xs font-semibold uppercase px-1.5 py-0.5">
                                 {STAKEHOLDER_ROLES[c.stakeholderRole] || c.stakeholderRole}
                               </span>
                             ) : "-"}
                           </td>
-                          <td className="p-3">
+                          <td className="p-3 max-w-48">
                             {c.email ? (
-                              <a href={`mailto:${c.email}`} className="hover:text-foreground text-muted-foreground flex items-center gap-1 whitespace-nowrap">
+                              <a href={`mailto:${c.email}`} className="hover:text-foreground text-muted-foreground flex items-center gap-1 break-all">
                                 <Mail className="size-3 shrink-0" /> {c.email}
                               </a>
                             ) : "-"}
                           </td>
-                          <td className="p-3">
+                          <td className="p-3 whitespace-nowrap">
                             {c.phone ? (
-                              <a href={`tel:${c.phone}`} className="hover:text-foreground text-muted-foreground flex items-center gap-1 whitespace-nowrap">
+                              <a href={`tel:${c.phone}`} className="hover:text-foreground text-muted-foreground flex items-center gap-1">
                                 <Phone className="size-3 shrink-0" /> {c.phone}
                               </a>
                             ) : "-"}
                           </td>
-                          <td className="p-3">
+                          <td className="p-3 max-w-40">
                             {c.lead ? (
-                              <Link href={`/leads?lead=${c.lead.id}`} className="text-(--primary) font-semibold hover:underline flex items-center gap-1 whitespace-nowrap">
-                                {c.lead.opportunityName} <ExternalLink className="size-2.5" />
+                              <Link href={`/leads?lead=${c.lead.id}`} className="text-(--primary) font-semibold hover:underline inline-flex items-center gap-1">
+                                <span>{c.lead.opportunityName}</span> <ExternalLink className="size-2.5 shrink-0" />
                               </Link>
                             ) : <span className="text-muted-foreground/50">-</span>}
                           </td>
-                          <td className="p-3">
+                          <td className="p-3 max-w-40">
                             {c.account ? (
-                              <Link href={`/accounts?account=${c.account.id}`} className="text-(--primary) font-semibold hover:underline flex items-center gap-1 whitespace-nowrap">
-                                {c.account.name} <ExternalLink className="size-2.5" />
+                              <Link href={`/accounts?account=${c.account.id}`} className="text-(--primary) font-semibold hover:underline inline-flex items-center gap-1">
+                                <span>{c.account.name}</span> <ExternalLink className="size-2.5 shrink-0" />
                               </Link>
                             ) : <span className="text-muted-foreground/50">-</span>}
                           </td>
-                          <td className="p-3">
+                          <td className="p-3 max-w-40">
                             {c.deal ? (
-                              <Link href={`/deals/pipeline?deal=${c.deal.id}`} className="text-(--primary) font-semibold hover:underline flex items-center gap-1 whitespace-nowrap">
-                                {c.deal.opportunityName} <ExternalLink className="size-2.5" />
+                              <Link href={`/deals/pipeline?deal=${c.deal.id}`} className="text-(--primary) font-semibold hover:underline inline-flex items-center gap-1">
+                                <span>{c.deal.opportunityName}</span> <ExternalLink className="size-2.5 shrink-0" />
                               </Link>
                             ) : <span className="text-muted-foreground/50">-</span>}
                           </td>
-                          <td className="p-3 text-muted-foreground whitespace-nowrap">{c.createdByName || "-"}</td>
+                          <td className="p-3 text-muted-foreground max-w-28">{c.createdByName || "-"}</td>
                           <td className="p-3">
                             {permission !== "none" && (
                               <button
