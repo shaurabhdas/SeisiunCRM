@@ -1237,31 +1237,38 @@ function AccountsPageContent() {
                           <p className="text-muted-foreground italic text-center py-4">No activity recorded for this account yet.</p>
                         ) : (
                           <div className="relative border-l pl-4 ml-2.5 py-2 space-y-4">
-                            {selectedAccount.recentActivities.map((act) => (
-                              <div key={act.id} className="relative">
-                                {/* Timeline Bullet Indicator */}
-                                <div className="absolute -left-[21.5px] top-0.5 size-3 rounded-full border-2 border-card bg-zinc-400 dark:bg-zinc-600" />
-                                
-                                <div className="space-y-0.5">
-                                  <div className="flex items-center justify-between">
-                                    <span className="font-semibold text-foreground text-3xs uppercase tracking-wide">
-                                      {act.activity_type.toUpperCase()}
-                                    </span>
-                                    <span className="text-3xs text-muted-foreground">
-                                      {new Date(act.activity_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}
-                                    </span>
-                                  </div>
-                                  <p className="text-3xs text-muted-foreground/80">
-                                    Lead: <span className="font-medium text-foreground">{act.opportunity_name}</span>
-                                  </p>
-                                  {act.note && (
-                                    <p className="mt-1 text-foreground text-2xs bg-muted/20 border rounded p-2 leading-relaxed whitespace-pre-line">
-                                      {act.note}
+                            {selectedAccount.recentActivities.map((act) => {
+                              // Activities logged alongside a sent email can carry the full email
+                              // body pasted into the note - the timeline only needs the summary line.
+                              const noteSummary = act.note
+                                ? act.note.split('\n').map(line => line.trim()).find(Boolean)
+                                : null
+                              return (
+                                <div key={act.id} className="relative">
+                                  {/* Timeline Bullet Indicator */}
+                                  <div className="absolute -left-[21.5px] top-0.5 size-3 rounded-full border-2 border-card bg-zinc-400 dark:bg-zinc-600" />
+
+                                  <div className="space-y-0.5">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-semibold text-foreground text-3xs uppercase tracking-wide">
+                                        {act.activity_type.toUpperCase()}
+                                      </span>
+                                      <span className="text-3xs text-muted-foreground">
+                                        {new Date(act.activity_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}
+                                      </span>
+                                    </div>
+                                    <p className="text-3xs text-muted-foreground/80">
+                                      Lead: <span className="font-medium text-foreground">{act.opportunity_name}</span>
                                     </p>
-                                  )}
+                                    {noteSummary && (
+                                      <p className="mt-1 text-foreground text-2xs bg-muted/20 border rounded p-2 leading-relaxed">
+                                        {noteSummary}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              )
+                            })}
                           </div>
                         )}
                       </div>
