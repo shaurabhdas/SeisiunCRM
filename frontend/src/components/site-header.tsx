@@ -25,7 +25,7 @@ export function SiteHeader() {
   const currentLabel = breadcrumbLabels[pathname] || "Forecast Pulse"
 
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center justify-between gap-3 border-b bg-background px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 lg:px-6">
+    <header className="flex h-(--header-height) shrink-0 items-center justify-between gap-3 sticky top-0 z-30 border-b border-(--glass-border) bg-(--glass-bg-strong) px-4 [backdrop-filter:blur(20px)_saturate(180%)] [-webkit-backdrop-filter:blur(20px)_saturate(180%)] transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 lg:px-6">
       <div className="flex min-w-0 items-center gap-2">
         <SidebarTrigger className="-ml-1 size-8 rounded-md" />
         <Separator
