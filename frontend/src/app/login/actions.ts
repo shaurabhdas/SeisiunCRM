@@ -9,6 +9,11 @@ export async function signIn(formData: FormData) {
   const email = (rawEmail || '').trim().toLowerCase()
   const password = formData.get('password') as string
 
+  // Reject oversized payloads before they reach password hashing/verification.
+  if (!password || password.length > 15) {
+    redirect('/login?error=invalid_credentials')
+  }
+
   const { error } = await supabase.auth.signInWithPassword({
     email,
     password,

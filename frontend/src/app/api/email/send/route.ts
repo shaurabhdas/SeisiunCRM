@@ -6,10 +6,22 @@ import { sanitizeEmailHtml } from '@/lib/sanitize-html'
 
 type Recipient = { email: string; name?: string; firstName?: string }
 
+// Escapes a substituted value so CRM data (e.g. a contact's name) can never
+// inject markup into the template it's being dropped into. Belt-and-suspenders
+// alongside sanitizeEmailHtml() below, which strips anything that gets through.
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
 function substituteVariables(html: string, vars: Record<string, string>) {
   let result = html
   for (const [key, value] of Object.entries(vars)) {
-    result = result.split(`{{${key}}}`).join(value)
+    result = result.split(`{{${key}}}`).join(escapeHtml(value || ""))
   }
   return result
 }

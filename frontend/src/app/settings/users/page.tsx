@@ -675,9 +675,10 @@ export default function UserManagementPage() {
                   <input
                     id="invite-password"
                     type="password"
-                    placeholder="At least 6 characters"
+                    placeholder="6-15 characters"
                     required
                     minLength={6}
+                    maxLength={15}
                     value={invitePassword}
                     onChange={(e) => setInvitePassword(e.target.value)}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -818,7 +819,8 @@ export default function UserManagementPage() {
                   type="password"
                   required
                   minLength={6}
-                  placeholder="At least 6 characters"
+                  maxLength={15}
+                  placeholder="6-15 characters"
                   value={resetPasswordInput}
                   onChange={(e) => setResetPasswordInput(e.target.value)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

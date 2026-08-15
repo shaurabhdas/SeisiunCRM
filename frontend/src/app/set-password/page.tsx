@@ -20,6 +20,10 @@ export default function SetPasswordPage() {
       setError('Password must be at least 8 characters.')
       return
     }
+    if (password.length > 15) {
+      setError('Password must be at most 15 characters.')
+      return
+    }
     if (!/[A-Z]/.test(password)) {
       setError('Password must contain at least one uppercase letter.')
       return
@@ -84,6 +88,7 @@ export default function SetPasswordPage() {
                 type="password"
                 placeholder="••••••••"
                 required
+                maxLength={15}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
@@ -97,6 +102,7 @@ export default function SetPasswordPage() {
                 type="password"
                 placeholder="••••••••"
                 required
+                maxLength={15}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>

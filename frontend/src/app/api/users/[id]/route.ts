@@ -141,6 +141,12 @@ export async function PUT(
         { status: 400 }
       )
     }
+    if (password.length > 15) {
+      return NextResponse.json(
+        { error: 'Password must be at most 15 characters long.' },
+        { status: 400 }
+      )
+    }
 
     const { error: updateError } = await adminClient.auth.admin.updateUserById(id, {
       password

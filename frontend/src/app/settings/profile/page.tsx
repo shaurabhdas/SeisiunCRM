@@ -166,6 +166,11 @@ function ProfilePageContent() {
       return
     }
 
+    if (newPassword.length > 15) {
+      setPwdMessage({ type: 'error', text: 'Password must be at most 15 characters.' })
+      return
+    }
+
     setPwdLoading(true)
 
     try {
@@ -337,9 +342,10 @@ function ProfilePageContent() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="text-3xs uppercase font-bold text-muted-foreground">Current Password</label>
-                    <input 
+                    <input
                       type="password"
                       required
+                      maxLength={15}
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
@@ -347,9 +353,10 @@ function ProfilePageContent() {
                   </div>
                   <div>
                     <label className="text-3xs uppercase font-bold text-muted-foreground">New Password</label>
-                    <input 
+                    <input
                       type="password"
                       required
+                      maxLength={15}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"
@@ -357,9 +364,10 @@ function ProfilePageContent() {
                   </div>
                   <div>
                     <label className="text-3xs uppercase font-bold text-muted-foreground">Confirm New Password</label>
-                    <input 
+                    <input
                       type="password"
                       required
+                      maxLength={15}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="w-full border rounded p-2 mt-1 text-xs text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-(--primary)"

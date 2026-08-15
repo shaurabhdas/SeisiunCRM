@@ -23,10 +23,22 @@ export function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
 }
 
+// Escapes a substituted value so CRM data (e.g. a contact's name) can never
+// inject markup into the template it's being dropped into - the template
+// HTML itself (author-controlled, from the rich text editor) is left as-is.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
 export function substituteVariables(html: string, vars: Record<string, string>): string {
   let result = html
   for (const [key, value] of Object.entries(vars)) {
-    result = result.split(`{{${key}}}`).join(value || "")
+    result = result.split(`{{${key}}}`).join(escapeHtml(value || ""))
   }
   return result
 }

@@ -80,6 +80,12 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+    if (password.length > 15) {
+      return NextResponse.json(
+        { error: 'Password must be at most 15 characters long.' },
+        { status: 400 }
+      )
+    }
 
     const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
       email,

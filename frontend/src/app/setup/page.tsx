@@ -55,6 +55,8 @@ export default function SetupPage() {
       errors.password = "Password is required."
     } else if (form.password.length < 8) {
       errors.password = "Password must be at least 8 characters."
+    } else if (form.password.length > 15) {
+      errors.password = "Password must be at most 15 characters."
     } else if (!/[A-Z]/.test(form.password)) {
       errors.password = "Password must contain at least one uppercase letter."
     } else if (!/[0-9]/.test(form.password)) {
@@ -213,9 +215,10 @@ export default function SetupPage() {
                   placeholder="••••••••"
                   value={form.password}
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                  maxLength={15}
                   className={inputClass}
                 />
-                <p className="text-xs text-muted-foreground">Minimum 8 characters, one uppercase letter, one number.</p>
+                <p className="text-xs text-muted-foreground">8-15 characters, one uppercase letter, one number.</p>
                 {fieldErrors.password && <p className="text-xs text-destructive">{fieldErrors.password}</p>}
               </div>
 
@@ -230,6 +233,7 @@ export default function SetupPage() {
                   placeholder="••••••••"
                   value={form.confirmPassword}
                   onChange={e => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
+                  maxLength={15}
                   className={inputClass}
                 />
                 {fieldErrors.confirmPassword && <p className="text-xs text-destructive">{fieldErrors.confirmPassword}</p>}

@@ -19,6 +19,9 @@ export async function setPassword(formData: FormData) {
   if (!password || password.length < 8) {
     return { error: 'Password must be at least 8 characters.' }
   }
+  if (password.length > 15) {
+    return { error: 'Password must be at most 15 characters.' }
+  }
   if (!/[A-Z]/.test(password)) {
     return { error: 'Password must contain at least one uppercase letter.' }
   }

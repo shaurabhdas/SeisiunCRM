@@ -68,6 +68,13 @@ export async function POST(request: Request) {
     )
   }
 
+  if (password.length > 15) {
+    return NextResponse.json(
+      { error: 'Password must be at most 15 characters.' },
+      { status: 400 }
+    )
+  }
+
   if (!/[A-Z]/.test(password)) {
     return NextResponse.json(
       { error: 'Password must contain at least one uppercase letter.' },
