@@ -16,6 +16,7 @@ const breadcrumbLabels: Record<string, string> = {
   "/deals/pipeline": "Deals Pipeline",
   "/deals/at-risk": "Deals At Risk",
   "/settings/users": "User Management",
+  "/settings/integrations": "Integrations",
   "/tasks": "Tasks",
   "/setup": "Setup",
 };

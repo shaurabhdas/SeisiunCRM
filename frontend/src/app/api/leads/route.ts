@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase, schemaStorage, escapeIlikePattern } from '@/lib/accounts'
 import { requireAuth } from '@/lib/auth'
 import { camelCaseLead } from '@/lib/leads'
+import { notifyNewLead } from '@/lib/slack'
 
 export async function GET(request: NextRequest) {
   const schema = request.headers.get('x-supabase-schema') || 'public'
@@ -116,6 +117,13 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (fetchErr) throw fetchErr
+
+      await notifyNewLead({
+        opportunityName: leadWithRelations.opportunity_name,
+        accountName: leadWithRelations.account?.name,
+        assignedRepName: leadWithRelations.assigned_rep_name,
+        dealValue: leadWithRelations.deal_value,
+      })
 
       return NextResponse.json(camelCaseLead(leadWithRelations), { status: 201 })
     } catch (error) {

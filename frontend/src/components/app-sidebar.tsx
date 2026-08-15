@@ -168,6 +168,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       subItems: profile?.role === 'super_admin'
         ? [
             { name: "Users", url: "/settings/users" },
+            { name: "Integrations", url: "/settings/integrations" },
             { name: "Profile", url: "/settings/profile" }
           ]
         : [

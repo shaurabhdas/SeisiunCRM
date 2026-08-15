@@ -1,4 +1,5 @@
 import { supabase } from './accounts'
+import { notifyDealWon, notifyDealLost } from './slack'
 
 export const DEAL_TYPE_LABELS: Record<string, string> = {
   poc: 'Pilot',
@@ -210,9 +211,25 @@ export async function updateDealStage(
     .from('deals')
     .update(updatePayload)
     .eq('id', dealId)
-    .select()
+    .select('*, account:accounts(name, industry)')
     .single()
   if (updateErr) throw updateErr
+
+  if (newStage === 'closed_won') {
+    await notifyDealWon({
+      opportunityName: updatedDeal.opportunity_name,
+      accountName: updatedDeal.account?.name,
+      assignedRepName: updatedDeal.assigned_rep_name,
+      value: updatedDeal.reported_value,
+    })
+  } else if (newStage === 'closed_lost') {
+    await notifyDealLost({
+      opportunityName: updatedDeal.opportunity_name,
+      accountName: updatedDeal.account?.name,
+      assignedRepName: updatedDeal.assigned_rep_name,
+      lostReason: updatedDeal.lost_reason,
+    })
+  }
 
   // Insert stage history transition
   const { error: histErr } = await supabase
