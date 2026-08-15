@@ -31,10 +31,7 @@ export async function PUT(request: NextRequest) {
   const schema = request.headers.get('x-supabase-schema') || 'public'
   return schemaStorage.run(schema, async () => {
     try {
-      const authUser = await requireAuth()
-      if (authUser.role !== 'super_admin') {
-        return NextResponse.json({ error: 'Only a super admin can change Slack settings.' }, { status: 403 })
-      }
+      await requireAuth()
 
       const { channelId, channelName, notifyNewLead, notifyDealWon, notifyDealLost } = await request.json()
 

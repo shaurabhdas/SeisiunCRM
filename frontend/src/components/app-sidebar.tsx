@@ -172,6 +172,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             { name: "Profile", url: "/settings/profile" }
           ]
         : [
+            { name: "Integrations", url: "/settings/integrations" },
             { name: "Profile", url: "/settings/profile" }
           ],
     },

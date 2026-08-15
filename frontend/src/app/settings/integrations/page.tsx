@@ -29,6 +29,37 @@ function IntegrationsPageContent() {
   const [settingsLoading, setSettingsLoading] = React.useState(false)
   const [settingsSaving, setSettingsSaving] = React.useState(false)
 
+  const [toastVisible, setToastVisible] = React.useState(false)
+  const [savedSnapshot, setSavedSnapshot] = React.useState<{
+    channelId: string
+    notifyNewLead: boolean
+    notifyDealWon: boolean
+    notifyDealLost: boolean
+  } | null>(null)
+
+  const isDirty = !!savedSnapshot && (
+    channelId !== savedSnapshot.channelId ||
+    notifyNewLead !== savedSnapshot.notifyNewLead ||
+    notifyDealWon !== savedSnapshot.notifyDealWon ||
+    notifyDealLost !== savedSnapshot.notifyDealLost
+  )
+
+  React.useEffect(() => {
+    if (!message) {
+      setToastVisible(false)
+      return
+    }
+    setToastVisible(false)
+    const showTimer = setTimeout(() => setToastVisible(true), 10)
+    const hideTimer = setTimeout(() => setToastVisible(false), 2800)
+    const clearTimer = setTimeout(() => setMessage(null), 3100)
+    return () => {
+      clearTimeout(showTimer)
+      clearTimeout(hideTimer)
+      clearTimeout(clearTimer)
+    }
+  }, [message])
+
   const fetchStatus = React.useCallback(async () => {
     try {
       const res = await fetch("/api/slack/oauth/status")
@@ -55,6 +86,12 @@ function IntegrationsPageContent() {
       setNotifyNewLead(settings.notifyNewLead ?? true)
       setNotifyDealWon(settings.notifyDealWon ?? true)
       setNotifyDealLost(settings.notifyDealLost ?? false)
+      setSavedSnapshot({
+        channelId: settings.channelId || "",
+        notifyNewLead: settings.notifyNewLead ?? true,
+        notifyDealWon: settings.notifyDealWon ?? true,
+        notifyDealLost: settings.notifyDealLost ?? false,
+      })
 
       if (channelsRes.ok) setChannels(await channelsRes.json())
     } catch (err) {
@@ -120,6 +157,7 @@ function IntegrationsPageContent() {
         throw new Error(data.error || "Failed to save Slack settings")
       }
       setMessage({ type: "success", text: "Slack notification settings saved." })
+      setSavedSnapshot({ channelId, notifyNewLead, notifyDealWon, notifyDealLost })
     } catch (err: any) {
       setMessage({ type: "error", text: err.message })
     } finally {
@@ -137,6 +175,7 @@ function IntegrationsPageContent() {
   }
 
   return (
+    <>
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="bg-[#f7f7f2] dark:bg-zinc-950/40">
@@ -194,16 +233,6 @@ function IntegrationsPageContent() {
                 </div>
               )}
 
-              {message && (
-                <div className={`flex items-center gap-2 p-3 rounded-lg text-xs mt-4 ${
-                  message.type === "success"
-                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                    : "bg-red-50 text-red-800 border border-red-200"
-                }`}>
-                  {message.type === "success" ? <CheckCircle2 className="size-4 shrink-0" /> : <AlertCircle className="size-4 shrink-0" />}
-                  <span>{message.text}</span>
-                </div>
-              )}
             </Card>
 
             {/* Notification Settings Card */}
@@ -262,8 +291,8 @@ function IntegrationsPageContent() {
                       <button
                         type="button"
                         onClick={handleSaveSettings}
-                        disabled={settingsSaving || !channelId}
-                        className="rounded bg-(--primary) px-4 py-2 text-xs font-semibold text-(--primary-foreground) hover:bg-neutral-800 flex items-center gap-1.5 disabled:opacity-50"
+                        disabled={settingsSaving || !channelId || !isDirty}
+                        className="rounded bg-(--primary) px-4 py-2 text-xs font-semibold text-(--primary-foreground) hover:bg-neutral-800 flex items-center gap-1.5 disabled:opacity-50 transition-opacity duration-150"
                       >
                         {settingsSaving && <Loader2 className="size-3.5 animate-spin" />}
                         Save Settings
@@ -278,6 +307,22 @@ function IntegrationsPageContent() {
         </div>
       </SidebarInset>
     </SidebarProvider>
+    {message && (
+      <div
+        className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-lg border px-4 py-3 text-xs font-medium shadow-lg transition-all ${
+          toastVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+        } ${
+          message.type === "success"
+            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+            : "bg-red-50 text-red-800 border-red-200"
+        }`}
+        style={{ transitionDuration: "200ms", transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)" }}
+      >
+        {message.type === "success" ? <CheckCircle2 className="size-4 shrink-0" /> : <AlertCircle className="size-4 shrink-0" />}
+        <span>{message.text}</span>
+      </div>
+    )}
+    </>
   )
 }
 

@@ -3,10 +3,7 @@ import { cookies } from 'next/headers'
 import { requireAuth } from '@/lib/auth'
 
 export async function GET() {
-  const authUser = await requireAuth()
-  if (authUser.role !== 'super_admin') {
-    return NextResponse.json({ error: 'Only a super admin can connect Slack.' }, { status: 403 })
-  }
+  await requireAuth()
 
   const clientId = process.env.SLACK_CLIENT_ID
   const redirectUri = process.env.SLACK_REDIRECT_URI

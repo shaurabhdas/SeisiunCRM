@@ -21,9 +21,6 @@ export async function GET(request: NextRequest) {
 
   try {
     const authUser = await requireAuth()
-    if (authUser.role !== 'super_admin') {
-      return NextResponse.redirect(`${redirectBase}?error=slack_oauth_failed`)
-    }
 
     const tokenResponse = await fetch('https://slack.com/api/oauth.v2.access', {
       method: 'POST',
