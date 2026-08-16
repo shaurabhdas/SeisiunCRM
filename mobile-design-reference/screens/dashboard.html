@@ -1,0 +1,279 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Seisiun CRM Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style type="text/tailwindcss">
+        @layer utilities {
+            .material-symbols-outlined {
+                font-family: 'Material Symbols Outlined';
+                font-weight: normal;
+                font-style: normal;
+                font-size: 24px;
+                line-height: 1;
+                letter-spacing: normal;
+                text-transform: none;
+                display: inline-block;
+                white-space: nowrap;
+                word-wrap: normal;
+                direction: ltr;
+                -webkit-font-feature-settings: 'liga';
+                -webkit-font-smoothing: antialiased;
+            }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed": "#0d1c2f",
+                        "tertiary-container": "#95a4bb",
+                        "surface-dim": "#d8dadc",
+                        "on-primary": "#ffffff",
+                        "secondary-container": "#fed65b",
+                        "primary-fixed": "#6ffbbe",
+                        "secondary": "#735c00",
+                        "inverse-primary": "#4edea3",
+                        "on-tertiary": "#ffffff",
+                        "gold-tint": "#fefce8",
+                        "surface": "#f7f9fb",
+                        "on-tertiary-fixed-variant": "#3a485c",
+                        "surface-container-low": "#f2f4f6",
+                        "on-background": "#191c1e",
+                        "surface-container-lowest": "#ffffff",
+                        "slate-text": "#0f172a",
+                        "tertiary-fixed-dim": "#b9c7e0",
+                        "on-surface": "#191c1e",
+                        "surface-variant": "#e0e3e5",
+                        "tertiary-fixed": "#d5e3fd",
+                        "primary": "#006c49",
+                        "secondary-fixed": "#ffe089",
+                        "on-secondary-fixed-variant": "#574500",
+                        "on-tertiary-container": "#2c3a4e",
+                        "primary-container": "#10b981",
+                        "tertiary": "#515f74",
+                        "on-secondary-container": "#745c00",
+                        "background": "#f7f9fb",
+                        "slate-muted": "#64748b",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-error-container": "#93000a",
+                        "on-primary-container": "#00422b",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary-fixed": "#241a00",
+                        "primary-fixed-dim": "#4edea3",
+                        "on-primary-fixed": "#002113",
+                        "surface-container": "#eceef0",
+                        "surface-bright": "#f7f9fb",
+                        "on-surface-variant": "#3c4a42",
+                        "emerald-tint": "#ecfdf5",
+                        "outline-variant": "#bbcabf",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#2d3133",
+                        "surface-tint": "#006c49",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed-dim": "#e9c349",
+                        "surface-container-high": "#e6e8ea",
+                        "error-container": "#ffdad6",
+                        "outline": "#6c7a71",
+                        "on-primary-fixed-variant": "#005236",
+                        "error": "#ba1a1a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "base": "4px",
+                        "margin-mobile": "16px",
+                        "md": "16px",
+                        "sm": "12px",
+                        "xs": "8px",
+                        "lg": "24px",
+                        "gutter-mobile": "12px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "display": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"],
+                        "body-lg": ["Hanken Grotesk"],
+                        "label-md": ["JetBrains Mono"],
+                        "headline-lg": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "display": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body-md text-body-md antialiased pb-24 md:pb-0">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface dark:bg-surface-container border-b border-outline-variant dark:border-outline flat no shadows flex justify-between items-center px-margin-mobile h-16 transition-colors duration-200">
+<div class="flex items-center gap-sm">
+<img class="w-8 h-8 rounded-full object-cover border border-outline-variant" data-alt="A small, professional headshot of a business executive in a bright office environment, styled as a circular profile avatar, corporate and crisp aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB05qnbATQrD435m9Pq7Fwb6HI7BZyx5-OyjkJUK7obITG8XiiCAhnVIw0E5zoenSXYSVH4tSiEXFeoNcW57jU5JX5sge6AVayCa0UVkaMLpQtaQ55f5hNgdOD7UBZ6N70LeYEquIzb6ESCFusDekCcLw5NO-7d9h66iYdty2em5DsdK2CJWwKlW3XhVlFKVQbNb_5TREh2K5BqM7q9WSPDDJ09vHq_RP1EnDThuanIOPasGxISBDLdy5xd1SJkMHHQDna3KdPaT6cwAw">
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">Seisiun Analytics</h1>
+</div>
+<button class="text-primary dark:text-primary-fixed hover:bg-surface-variant/50 p-2 rounded-full transition-colors duration-200 flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="pt-24 px-margin-mobile max-w-7xl mx-auto space-y-lg">
+<!-- Welcome Section -->
+<section>
+<p class="font-label-md text-label-md text-slate-muted uppercase tracking-wider mb-base">Good morning,</p>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-slate-text">Alex Mercer</h2>
+</section>
+<!-- High-level Metrics Bento Grid -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-md">
+<!-- Total Revenue Card -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-md relative overflow-hidden group">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="flex justify-between items-start mb-sm">
+<span class="font-label-sm text-label-sm text-slate-muted">Total Revenue</span>
+<span class="material-symbols-outlined text-outline" data-icon="payments">payments</span>
+</div>
+<div class="flex items-baseline gap-sm mb-base">
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-slate-text">$1.24M</span>
+<div class="flex items-center text-primary font-label-sm text-label-sm bg-emerald-tint px-2 py-1 rounded-full border border-primary/20">
+<span class="material-symbols-outlined text-[14px]" data-icon="trending_up">trending_up</span>
+<span class="ml-1">+12%</span>
+</div>
+</div>
+<!-- Sparkline Placeholder -->
+<div class="h-12 w-full mt-sm flex items-end justify-between gap-1 opacity-80">
+<div class="w-full bg-primary/20 h-1/4 rounded-t-sm"></div>
+<div class="w-full bg-primary/20 h-1/3 rounded-t-sm"></div>
+<div class="w-full bg-primary/20 h-1/2 rounded-t-sm"></div>
+<div class="w-full bg-primary/40 h-2/3 rounded-t-sm"></div>
+<div class="w-full bg-primary/60 h-3/4 rounded-t-sm"></div>
+<div class="w-full bg-primary/80 h-4/5 rounded-t-sm"></div>
+<div class="w-full bg-primary h-full rounded-t-sm"></div>
+</div>
+</div>
+<!-- Active Deals Card -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-md relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary"></div>
+<div class="flex justify-between items-start mb-sm">
+<span class="font-label-sm text-label-sm text-slate-muted">Active Deals</span>
+<span class="material-symbols-outlined text-outline" data-icon="handshake">handshake</span>
+</div>
+<div class="font-headline-lg-mobile text-headline-lg-mobile text-slate-text mb-xs">42</div>
+<p class="font-label-sm text-label-sm text-slate-muted">Across 3 pipelines</p>
+</div>
+<!-- Tasks Due Card -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-md relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-slate-muted"></div>
+<div class="flex justify-between items-start mb-sm">
+<span class="font-label-sm text-label-sm text-slate-muted">Tasks Due</span>
+<span class="material-symbols-outlined text-outline" data-icon="assignment_late">assignment_late</span>
+</div>
+<div class="font-headline-lg-mobile text-headline-lg-mobile text-slate-text mb-xs">7</div>
+<p class="font-label-sm text-label-sm text-slate-muted">Requires immediate attention</p>
+</div>
+</section>
+<!-- Recent Activity & Quick Actions -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+<!-- Activity List -->
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
+<div class="p-md border-b border-surface-variant flex justify-between items-center bg-surface-container-low">
+<h3 class="font-label-md text-label-md text-slate-text">Recent Activity</h3>
+<button class="font-label-sm text-label-sm text-primary hover:underline">View All</button>
+</div>
+<div class="divide-y divide-surface-variant">
+<div class="p-md flex items-start gap-sm hover:bg-surface-variant/20 transition-colors">
+<div class="w-8 h-8 rounded-full bg-emerald-tint border border-primary/20 flex items-center justify-center shrink-0 mt-1">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="swap_horiz">swap_horiz</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-slate-text font-medium">Acme Corp deal moved</p>
+<p class="font-label-sm text-label-sm text-slate-muted">Advanced from 'Proposal' to 'Negotiation' phase.</p>
+<span class="font-label-sm text-label-sm text-tertiary-container mt-xs block">2 hours ago</span>
+</div>
+</div>
+<div class="p-md flex items-start gap-sm hover:bg-surface-variant/20 transition-colors bg-surface-variant/10">
+<div class="w-8 h-8 rounded-full bg-surface-variant border border-outline-variant flex items-center justify-center shrink-0 mt-1">
+<span class="material-symbols-outlined text-slate-muted text-[18px]" data-icon="call">call</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-slate-text font-medium">Call logged</p>
+<p class="font-label-sm text-label-sm text-slate-muted">Initial discovery call with Sarah Jenkins at TechFlow.</p>
+<span class="font-label-sm text-label-sm text-tertiary-container mt-xs block">5 hours ago</span>
+</div>
+</div>
+<div class="p-md flex items-start gap-sm hover:bg-surface-variant/20 transition-colors">
+<div class="w-8 h-8 rounded-full bg-gold-tint border border-secondary/20 flex items-center justify-center shrink-0 mt-1">
+<span class="material-symbols-outlined text-secondary text-[18px]" data-icon="mail">mail</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-slate-text font-medium">Contract Sent</p>
+<p class="font-label-sm text-label-sm text-slate-muted">MSA sent to Global Industries for review.</p>
+<span class="font-label-sm text-label-sm text-tertiary-container mt-xs block">Yesterday</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Quick Actions -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-md">
+<h3 class="font-label-md text-label-md text-slate-text mb-sm pb-xs border-b border-surface-variant">Quick Actions</h3>
+<div class="space-y-sm">
+<button class="w-full bg-primary text-on-primary font-label-md text-label-md py-3 px-4 rounded-lg flex items-center justify-center gap-xs hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="add">add</span>
+                        New Deal
+                    </button>
+<button class="w-full bg-surface-container-lowest border border-primary text-primary font-label-md text-label-md py-3 px-4 rounded-lg flex items-center justify-center gap-xs hover:bg-emerald-tint transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="person_add">person_add</span>
+                        Add Contact
+                    </button>
+<button class="w-full bg-surface-container-lowest border border-outline-variant text-slate-text font-label-md text-label-md py-3 px-4 rounded-lg flex items-center justify-center gap-xs hover:bg-surface-variant/50 transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="edit_document">edit_document</span>
+                        Log Activity
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 bg-surface dark:bg-surface-container border-t border-outline-variant dark:border-outline flat no shadows flex justify-around items-center h-20 pb-safe px-2">
+<!-- Dashboard (Active) -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard" data-weight="fill" style="font-variation-settings: &quot;FILL&quot; 1;">dashboard</span>
+<span class="font-label-sm text-label-sm mt-1">Dashboard</span>
+</a>
+<!-- Pipeline (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant scale-95 active:scale-90 transition-transform rounded-xl px-2 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="view_kanban">view_kanban</span>
+<span class="font-label-sm text-label-sm mt-1">Pipeline</span>
+</a>
+<!-- Contacts (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant scale-95 active:scale-90 transition-transform rounded-xl px-2 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="contacts">contacts</span>
+<span class="font-label-sm text-label-sm mt-1">Contacts</span>
+</a>
+<!-- Tasks (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant scale-95 active:scale-90 transition-transform rounded-xl px-2 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="assignment">assignment</span>
+<span class="font-label-sm text-label-sm mt-1">Tasks</span>
+</a>
+</nav>
+
+
+</body></html>

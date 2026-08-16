@@ -1,0 +1,170 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Seisiun Analytics - Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed": "#0d1c2f",
+                        "tertiary-container": "#95a4bb",
+                        "surface-dim": "#d8dadc",
+                        "on-primary": "#ffffff",
+                        "secondary-container": "#fed65b",
+                        "primary-fixed": "#6ffbbe",
+                        "secondary": "#735c00",
+                        "inverse-primary": "#4edea3",
+                        "on-tertiary": "#ffffff",
+                        "gold-tint": "#fefce8",
+                        "surface": "#f7f9fb",
+                        "on-tertiary-fixed-variant": "#3a485c",
+                        "surface-container-low": "#f2f4f6",
+                        "on-background": "#191c1e",
+                        "surface-container-lowest": "#ffffff",
+                        "slate-text": "#0f172a",
+                        "tertiary-fixed-dim": "#b9c7e0",
+                        "on-surface": "#191c1e",
+                        "surface-variant": "#e0e3e5",
+                        "tertiary-fixed": "#d5e3fd",
+                        "primary": "#006c49",
+                        "secondary-fixed": "#ffe089",
+                        "on-secondary-fixed-variant": "#574500",
+                        "on-tertiary-container": "#2c3a4e",
+                        "primary-container": "#10b981",
+                        "tertiary": "#515f74",
+                        "on-secondary-container": "#745c00",
+                        "background": "#f7f9fb",
+                        "slate-muted": "#64748b",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-error-container": "#93000a",
+                        "on-primary-container": "#00422b",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary-fixed": "#241a00",
+                        "primary-fixed-dim": "#4edea3",
+                        "on-primary-fixed": "#002113",
+                        "surface-container": "#eceef0",
+                        "surface-bright": "#f7f9fb",
+                        "on-surface-variant": "#3c4a42",
+                        "emerald-tint": "#ecfdf5",
+                        "outline-variant": "#bbcabf",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#2d3133",
+                        "surface-tint": "#006c49",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed-dim": "#e9c349",
+                        "surface-container-high": "#e6e8ea",
+                        "error-container": "#ffdad6",
+                        "outline": "#6c7a71",
+                        "on-primary-fixed-variant": "#005236",
+                        "error": "#ba1a1a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "base": "4px",
+                        "margin-mobile": "16px",
+                        "md": "16px",
+                        "sm": "12px",
+                        "xs": "8px",
+                        "lg": "24px",
+                        "gutter-mobile": "12px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "display": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"],
+                        "body-lg": ["Hanken Grotesk"],
+                        "label-md": ["JetBrains Mono"],
+                        "headline-lg": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "display": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface min-h-screen flex items-center justify-center font-body-md antialiased p-margin-mobile">
+<!-- Login Container -->
+<main class="w-full max-w-md bg-surface-container-lowest rounded-xl border border-surface-container-highest p-xl flex flex-col gap-lg" style="box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+<!-- Logo Header -->
+<header class="flex flex-col items-center gap-md text-center">
+<img alt="Seisiun Analytics Logo" class="w-32 h-auto object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLunFsn_x-X8QkwzlGTl1EUya9vpPNQCUvoU4A5SOoDrXrNE5wfoCqP3UH4Scikrh9FyqsJxlrGVIHqOZPu4y9686mzbTf2qA0ppLRQnsql_3ABavVcfDau07UfhHsWFJdFmj66vY6POeDJ-yMhDuASqnEARUoQnFASpQpafOBWCKqV3s9ORcmmsVP1lNNVHTcK6LDnRE7UqoHrMebLxn5M24I3uUycs7ngWU3X3q62Ny1tRk6cMoBBebA">
+<div>
+<h1 class="font-headline-md text-headline-md text-on-surface">Welcome Back</h1>
+<p class="font-body-md text-body-md text-slate-muted mt-base">Sign in to access your CRM dashboard.</p>
+</div>
+</header>
+<!-- Login Form -->
+<form class="flex flex-col gap-md" onsubmit="event.preventDefault();">
+<!-- Email Field -->
+<div class="flex flex-col gap-base">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase" for="email">Email Address</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-slate-muted" data-icon="mail">mail</span>
+<input class="w-full bg-surface-container-lowest border border-surface-container-highest rounded text-on-surface pl-10 pr-sm py-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-body-md text-body-md transition-colors" id="email" name="email" placeholder="name@company.com" required="" type="email">
+</div>
+</div>
+<!-- Password Field -->
+<div class="flex flex-col gap-base">
+<div class="flex justify-between items-center">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase" for="password">Password</label>
+<a class="font-label-sm text-label-sm text-primary hover:text-primary-container transition-colors" href="#">Forgot?</a>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-slate-muted" data-icon="lock">lock</span>
+<input class="w-full bg-surface-container-lowest border border-surface-container-highest rounded text-on-surface pl-10 pr-sm py-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-body-md text-body-md transition-colors" id="password" name="password" placeholder="••••••••" required="" type="password">
+</div>
+</div>
+<!-- Action Button -->
+<button class="w-full bg-primary hover:bg-primary-container text-on-primary rounded font-label-md text-label-md py-sm mt-xs transition-colors flex justify-center items-center gap-xs" type="submit">
+<span>Sign In</span>
+<span class="material-symbols-outlined text-[18px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</form>
+<!-- Footer -->
+<footer class="text-center mt-sm">
+<p class="font-label-sm text-label-sm text-slate-muted">
+                {{DATA:DOCUMENT:DOCUMENT_9}}
+            </p>
+</footer>
+</main>
+</body></html>
