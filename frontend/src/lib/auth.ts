@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies, headers } from 'next/headers'
 
 export type AuthUser = {
@@ -44,16 +45,24 @@ export async function getAuthUser(): Promise<AuthUser | null> {
   const headerList = await headers()
   const schema = headerList.get('x-supabase-schema') || 'public'
 
-  const supabase = await getAuthUserClient()
-
   // Mobile clients have no cookie session - they authenticate against Supabase
   // Auth directly and send the resulting access token as a bearer header.
-  // Passing the token explicitly to getUser() verifies it statelessly against
-  // Supabase's Auth server, bypassing the cookie storage adapter entirely.
+  // Passing a token to getUser(jwt) only verifies that one call statelessly -
+  // it does NOT attach the token to the client's later requests, so a
+  // subsequent .from() call on that same client would run as the anon role,
+  // not this user. Build a client with the token set as a global auth header
+  // instead, so every request it makes (verification and the profile lookup
+  // below) is properly authorized as this user.
   const bearerMatch = headerList.get('authorization')?.match(/^Bearer\s+(.+)$/i)
-  const { data: { user } } = bearerMatch
-    ? await supabase.auth.getUser(bearerMatch[1])
-    : await supabase.auth.getUser()
+  const supabase = bearerMatch
+    ? createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { db: { schema }, global: { headers: { Authorization: `Bearer ${bearerMatch[1]}` } } }
+      )
+    : await getAuthUserClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
     // Under testing, fallback to a mock Super Admin user if no active session.
