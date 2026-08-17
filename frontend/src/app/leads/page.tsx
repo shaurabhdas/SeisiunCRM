@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { Card } from "@/components/ui/card"
+import { PendingApprovalBanner } from "@/components/pending-approval-banner"
 import {
   UsersRound,
   TrendingUp,
@@ -99,6 +100,10 @@ interface Lead {
   contacts: Contact[]
   activities: Activity[]
   stageHistory: StageHistory[]
+  pendingTransition?: any
+  pendingTransitionRequestedBy?: string | null
+  pendingTransitionRequestedByName?: string | null
+  pendingTransitionAction?: string | null
 }
 
 function LeadsPageContent() {
@@ -149,6 +154,7 @@ function LeadsPageContent() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false)
   const [deleteError, setDeleteError] = React.useState<string | null>(null)
   const [isDeleting, setIsDeleting] = React.useState(false)
+  const [isApproving, setIsApproving] = React.useState(false)
 
   // Account Confirmation State (Fix 1)
   const [isAccountConfirmed, setIsAccountConfirmed] = React.useState(false)
@@ -576,6 +582,24 @@ function LeadsPageContent() {
       }
     } catch (err) {
       console.error("Error updating stage:", err)
+    }
+  }
+
+  const handleApprove = async () => {
+    if (!selectedLeadId) return
+    setIsApproving(true)
+    try {
+      const res = await fetch(`/api/leads/${selectedLeadId}/approve`, { method: "POST" })
+      if (res.ok) {
+        await fetchLeads()
+      } else {
+        const errData = await res.json()
+        alert(errData.error || "Failed to approve")
+      }
+    } catch (err) {
+      console.error("Error approving lead:", err)
+    } finally {
+      setIsApproving(false)
     }
   }
 
@@ -1237,7 +1261,15 @@ function LeadsPageContent() {
                   
                   {/* Action Buttons */}
                   <div className="flex items-center gap-3">
-                    {selectedLead.stage === 'evaluating' ? (
+                    {selectedLead.pendingTransition ? (
+                      <PendingApprovalBanner
+                        pendingTransition={selectedLead.pendingTransition}
+                        requestedByName={selectedLead.pendingTransitionRequestedByName || null}
+                        isManager={userProfile?.role === 'super_admin' || userProfile?.role === 'manager'}
+                        onApprove={handleApprove}
+                        approving={isApproving}
+                      />
+                    ) : selectedLead.stage === 'evaluating' ? (
                       <div className="relative flex-1">
                         <button
                           onClick={() => setShowOutcomeDropdown(prev => !prev)}
@@ -1301,7 +1333,7 @@ function LeadsPageContent() {
                       })()
                     )}
 
-                    {selectedLead.stage !== 'disqualified' && (
+                    {!selectedLead.pendingTransition && selectedLead.stage !== 'disqualified' && (
                       <button
                         onClick={() => setIsDisqualifyOpen(true)}
                         className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-(--destructive) transition-colors hover:bg-red-100"

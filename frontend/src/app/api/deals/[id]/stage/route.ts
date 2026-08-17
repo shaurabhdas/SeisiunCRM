@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, schemaStorage } from '@/lib/accounts'
 import { updateDealStage } from '@/lib/deals'
-import { requireAuth, canModifyRecord } from '@/lib/auth'
+import { requireAuth, canModifyRecord, isManagerOrAbove } from '@/lib/auth'
+import { notifyManagers, createNotification } from '@/lib/notifications'
+import { notifyApprovalNeeded } from '@/lib/slack'
 
 export async function PUT(
   request: NextRequest,
@@ -14,7 +16,6 @@ export async function PUT(
       const { id } = await params
       const body = await request.json()
       const { toStage, ...options } = body
-      const lost_reason = options.lost_reason
 
       if (!toStage) {
         return NextResponse.json({ error: 'Missing toStage parameter' }, { status: 400 })
@@ -86,7 +87,7 @@ export async function PUT(
         }
 
         const lostReason = options.lost_reason !== undefined
-          ? options.lost_reason 
+          ? options.lost_reason
           : deal.lost_reason
         const allowedReasons = [
           'lost_to_competitor',
@@ -98,8 +99,8 @@ export async function PUT(
 
         if (!lostReason || !allowedReasons.includes(lostReason)) {
           return NextResponse.json(
-            { 
-              error: 'A valid lost reason must be selected to close the deal as lost. Options are: Lost to Competitor, Budget Frozen, No Decision, Scope Too Large, Timing.' 
+            {
+              error: 'A valid lost reason must be selected to close the deal as lost. Options are: Lost to Competitor, Budget Frozen, No Decision, Scope Too Large, Timing.'
             },
             { status: 400 }
           )
@@ -117,8 +118,64 @@ export async function PUT(
         }
       }
 
-      // Progression rules passed. Update the stage.
+      // Progression rules passed.
+      if (!isManagerOrAbove(authUser.role)) {
+        if (deal.pending_transition) {
+          return NextResponse.json({ error: 'This deal already has a stage change awaiting approval.' }, { status: 409 })
+        }
+
+        const { data: updatedDeal, error: pendingErr } = await supabase
+          .from('deals')
+          .update({
+            pending_transition: { toStage, ...options },
+            pending_transition_requested_by: authUser.id,
+            pending_transition_requested_by_name: authUser.full_name,
+            pending_transition_requested_at: new Date().toISOString(),
+            pending_transition_action: 'stage',
+          })
+          .eq('id', id)
+          .select()
+          .single()
+        if (pendingErr) throw pendingErr
+
+        const link = `${process.env.NEXT_PUBLIC_SITE_URL}/deals/pipeline?deal=${id}`
+        await notifyManagers({
+          type: 'approval_requested',
+          recordType: 'deal',
+          recordId: id,
+          recordName: deal.opportunity_name,
+          message: `${authUser.full_name} requested to move "${deal.opportunity_name}" to ${toStage}`,
+          actorId: authUser.id,
+          actorName: authUser.full_name,
+        })
+        await notifyApprovalNeeded({
+          recordType: 'deal',
+          recordName: deal.opportunity_name,
+          requestedByName: authUser.full_name,
+          link,
+        })
+
+        return NextResponse.json({ ...updatedDeal, deal: updatedDeal, showConversionPrompt: false })
+      }
+
+      const hadPendingRequest = !!deal.pending_transition
+      const previousRequester = deal.pending_transition_requested_by
+
       const result = await updateDealStage(id, toStage, options, authUser.id)
+
+      if (hadPendingRequest && previousRequester && previousRequester !== authUser.id) {
+        await createNotification({
+          recipientId: previousRequester,
+          type: 'record_updated',
+          recordType: 'deal',
+          recordId: id,
+          recordName: deal.opportunity_name,
+          message: `${authUser.full_name} updated "${deal.opportunity_name}" directly, superseding your pending request`,
+          actorId: authUser.id,
+          actorName: authUser.full_name,
+        })
+      }
+
       return NextResponse.json({
         ...result.deal,
         deal: result.deal,

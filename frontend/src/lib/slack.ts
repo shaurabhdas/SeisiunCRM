@@ -79,3 +79,80 @@ export function notifyDealLost(deal: { opportunityName: string; accountName?: st
   if (deal.assignedRepName) parts.push(`(${deal.assignedRepName})`)
   return notify(c => c.notifyDealLost, parts.join(' '))
 }
+
+// DMing a specific manager doesn't depend on the shared-channel config
+// (default channel, per-event toggles) - just whether Slack is connected at all.
+async function getSlackBotToken(): Promise<string | null> {
+  const { data } = await supabase
+    .from('slack_integrations')
+    .select('bot_access_token')
+    .eq('id', 'default')
+    .maybeSingle()
+  return data?.bot_access_token || null
+}
+
+// Resolves a manager's Slack member id from their CRM email, caching the
+// result on user_profiles.slack_member_id so repeat notifications skip the
+// lookup. Requires the users:read.email scope on the connected Slack app -
+// returns null (silently) if the lookup fails, e.g. the scope isn't granted
+// yet or the CRM/Slack emails don't match.
+async function resolveSlackMemberId(botAccessToken: string, userId: string, email: string, cachedId: string | null): Promise<string | null> {
+  if (cachedId) return cachedId
+
+  const res = await fetch(`https://slack.com/api/users.lookupByEmail?email=${encodeURIComponent(email)}`, {
+    headers: { Authorization: `Bearer ${botAccessToken}` },
+  })
+  const data = await res.json()
+  if (!data.ok || !data.user?.id) {
+    console.error('Slack users.lookupByEmail failed for', email, ':', data.error)
+    return null
+  }
+
+  await supabase.from('user_profiles').update({ slack_member_id: data.user.id }).eq('id', userId)
+  return data.user.id
+}
+
+async function dmSlackUser(botAccessToken: string, slackMemberId: string, text: string): Promise<void> {
+  const openRes = await fetch('https://slack.com/api/conversations.open', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${botAccessToken}`,
+      'Content-Type': 'application/json; charset=utf-8',
+    },
+    body: JSON.stringify({ users: slackMemberId }),
+  })
+  const openData = await openRes.json()
+  if (!openData.ok || !openData.channel?.id) {
+    console.error('Slack conversations.open failed:', openData.error)
+    return
+  }
+
+  await postToSlack(botAccessToken, openData.channel.id, text)
+}
+
+// Best-effort DM to every manager/super_admin that a rep's stage-change
+// request needs approval. A failure for one manager (or all of them, e.g.
+// Slack not connected) never blocks the approval-request flow itself.
+export async function notifyApprovalNeeded(params: { recordType: 'lead' | 'deal'; recordName: string; requestedByName: string; link: string }): Promise<void> {
+  try {
+    const botAccessToken = await getSlackBotToken()
+    if (!botAccessToken) return
+
+    const { data: managers } = await supabase
+      .from('user_profiles')
+      .select('id, email, slack_member_id')
+      .in('role', ['manager', 'super_admin'])
+      .eq('status', 'active')
+    if (!managers || managers.length === 0) return
+
+    const text = `:hourglass_flowing_sand: *${params.requestedByName}* is requesting approval to move ${params.recordType} *${params.recordName}* to its next stage.\n${params.link}`
+
+    await Promise.all(managers.map(async (manager: { id: string; email: string; slack_member_id: string | null }) => {
+      const memberId = await resolveSlackMemberId(botAccessToken, manager.id, manager.email, manager.slack_member_id)
+      if (!memberId) return
+      await dmSlackUser(botAccessToken, memberId, text)
+    }))
+  } catch (error) {
+    console.error('Slack approval notification failed:', error)
+  }
+}

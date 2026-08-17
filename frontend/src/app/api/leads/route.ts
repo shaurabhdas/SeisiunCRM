@@ -3,6 +3,7 @@ import { supabase, schemaStorage, escapeIlikePattern } from '@/lib/accounts'
 import { requireAuth } from '@/lib/auth'
 import { camelCaseLead } from '@/lib/leads'
 import { notifyNewLead } from '@/lib/slack'
+import { notifyManagers } from '@/lib/notifications'
 
 export async function GET(request: NextRequest) {
   const schema = request.headers.get('x-supabase-schema') || 'public'
@@ -123,6 +124,15 @@ export async function POST(request: NextRequest) {
         accountName: leadWithRelations.account?.name,
         assignedRepName: leadWithRelations.assigned_rep_name,
         dealValue: leadWithRelations.deal_value,
+      })
+      await notifyManagers({
+        type: 'record_updated',
+        recordType: 'lead',
+        recordId: newLead.id,
+        recordName: leadWithRelations.opportunity_name,
+        message: `${authUser.full_name} created a new lead "${leadWithRelations.opportunity_name}"`,
+        actorId: authUser.id,
+        actorName: authUser.full_name,
       })
 
       return NextResponse.json(camelCaseLead(leadWithRelations), { status: 201 })

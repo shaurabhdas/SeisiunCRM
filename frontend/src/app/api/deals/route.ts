@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase, schemaStorage, escapeIlikePattern } from '@/lib/accounts'
 import { fetchDeals, createDeal } from '@/lib/deals'
 import { requireAuth } from '@/lib/auth'
+import { notifyManagers } from '@/lib/notifications'
 
 export async function GET(request: NextRequest) {
   const schema = request.headers.get('x-supabase-schema') || 'public'
@@ -75,6 +76,15 @@ export async function POST(request: NextRequest) {
         proposal_date: proposal_date,
         assigned_rep_id: authUser.id,
         assigned_rep_name: authUser.full_name
+      })
+      await notifyManagers({
+        type: 'record_updated',
+        recordType: 'deal',
+        recordId: newDeal.id,
+        recordName: newDeal.opportunity_name,
+        message: `${authUser.full_name} created a new deal "${newDeal.opportunity_name}"`,
+        actorId: authUser.id,
+        actorName: authUser.full_name,
       })
       return NextResponse.json(newDeal, { status: 201 })
     } catch (error) {

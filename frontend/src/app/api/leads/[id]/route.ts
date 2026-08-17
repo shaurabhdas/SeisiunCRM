@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase, schemaStorage } from '@/lib/accounts'
 import { requireAuth, canModifyRecord } from '@/lib/auth'
 import { camelCaseLead } from '@/lib/leads'
+import { createNotification } from '@/lib/notifications'
 
 export async function PUT(
   request: NextRequest,
@@ -67,6 +68,19 @@ export async function PUT(
           })
           .eq('id', lead.account_id)
         if (accErr) throw accErr
+      }
+
+      if (lead.assigned_rep_id && lead.assigned_rep_id !== authUser.id) {
+        await createNotification({
+          recipientId: lead.assigned_rep_id,
+          type: 'record_updated',
+          recordType: 'lead',
+          recordId: id,
+          recordName: updatedLead.opportunity_name,
+          message: `${authUser.full_name} updated "${updatedLead.opportunity_name}"`,
+          actorId: authUser.id,
+          actorName: authUser.full_name,
+        })
       }
 
       return NextResponse.json(camelCaseLead(updatedLead))

@@ -66,6 +66,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const supabase = createClient()
   const [profile, setProfile] = React.useState<any>(null)
   const [user, setUser] = React.useState<any>(null)
+  const [notifications, setNotifications] = React.useState<any[]>([])
+  const [unreadCount, setUnreadCount] = React.useState(0)
+  const [notifOpen, setNotifOpen] = React.useState(false)
 
   React.useEffect(() => {
     const fetchUser = async () => {
@@ -84,6 +87,41 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
     fetchUser()
   }, [])
+
+  const fetchNotifications = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/notifications?limit=8')
+      if (res.ok) {
+        const data = await res.json()
+        setNotifications(data.notifications || [])
+        setUnreadCount(data.unreadCount || 0)
+      }
+    } catch (err) {
+      console.error('Error loading notifications:', err)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    if (user) fetchNotifications()
+  }, [user, fetchNotifications])
+
+  const handleNotificationClick = async (n: any) => {
+    setNotifOpen(false)
+    if (!n.read) {
+      setUnreadCount(prev => Math.max(0, prev - 1))
+      setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))
+      try {
+        await fetch('/api/notifications/mark-read', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: [n.id] }),
+        })
+      } catch (err) {
+        console.error('Error marking notification read:', err)
+      }
+    }
+    router.push(n.recordType === 'lead' ? `/leads?lead=${n.recordId}` : `/deals/pipeline?deal=${n.recordId}`)
+  }
 
   const displayName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User"
   const displayEmail = profile?.email || user?.email || ""
@@ -282,6 +320,48 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter className="border-t border-sidebar-border/40 p-2">
         <SidebarMenu>
           <SidebarMenuItem>
+            <DropdownMenu open={notifOpen} onOpenChange={(open: boolean) => { setNotifOpen(open); if (open) fetchNotifications() }}>
+              <DropdownMenuTrigger
+                render={
+                  <SidebarMenuButton size="lg" className="w-full hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent relative">
+                    <Bell className="size-4 shrink-0" />
+                    <span className="flex-1 text-left text-sm group-data-[collapsible=icon]:hidden">Notifications</span>
+                    {unreadCount > 0 && (
+                      <span className="flex size-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:-top-0.5 group-data-[collapsible=icon]:-right-0.5">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </SidebarMenuButton>
+                }
+              />
+              <DropdownMenuContent className="w-80" align="start" side="top" sideOffset={8}>
+                <div className="flex items-center justify-between px-2 py-1.5">
+                  <span className="text-xs font-semibold text-foreground">Notifications</span>
+                  <DropdownMenuItem render={<Link href="/notifications" />} className="text-3xs text-muted-foreground w-auto px-1 py-0">
+                    View all
+                  </DropdownMenuItem>
+                </div>
+                <DropdownMenuSeparator />
+                {notifications.length === 0 ? (
+                  <div className="px-2 py-4 text-center text-3xs text-muted-foreground">No notifications yet</div>
+                ) : (
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.map((n) => (
+                      <DropdownMenuItem
+                        key={n.id}
+                        onClick={() => handleNotificationClick(n)}
+                        className={`flex flex-col items-start gap-0.5 whitespace-normal py-2 ${!n.read ? 'bg-sidebar-accent/50' : ''}`}
+                      >
+                        <span className="text-xs text-foreground leading-snug">{n.message}</span>
+                        <span className="text-3xs text-muted-foreground">{new Date(n.createdAt).toLocaleString()}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
@@ -318,7 +398,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <CreditCard className="size-4 mr-2" />
                   Billing
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem render={<Link href="/notifications" />}>
                   <Bell className="size-4 mr-2" />
                   Notifications
                 </DropdownMenuItem>

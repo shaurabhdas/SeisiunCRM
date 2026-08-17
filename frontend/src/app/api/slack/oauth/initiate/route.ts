@@ -15,7 +15,7 @@ export async function GET() {
     )
   }
 
-  const scopes = ['chat:write', 'chat:write.public', 'channels:read', 'groups:read', 'team:read'].join(',')
+  const scopes = ['chat:write', 'chat:write.public', 'channels:read', 'groups:read', 'team:read', 'users:read.email'].join(',')
 
   const state = crypto.randomUUID()
   const cookieStore = await cookies()

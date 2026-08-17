@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/accounts'
 import { requireAuth, canModifyRecord } from '@/lib/auth'
+import { createNotification } from '@/lib/notifications'
 
 export async function PUT(
   request: NextRequest,
@@ -22,8 +23,20 @@ export async function PUT(
       return NextResponse.json({ error: 'Only the assigned rep or a manager can update this deal.' }, { status: 403 })
     }
 
-    // Omit stage changes in this route as specified
-    const { stage, ...updates } = body
+    // Omit stage changes in this route as specified. Also omit the
+    // pending_transition* columns - this is a generic edit endpoint reachable
+    // by any rep who owns the deal, and those columns must only ever be
+    // written by the gated stage/disqualify/approve routes, never forged or
+    // cleared directly here.
+    const {
+      stage,
+      pending_transition,
+      pending_transition_requested_by,
+      pending_transition_requested_by_name,
+      pending_transition_requested_at,
+      pending_transition_action,
+      ...updates
+    } = body
 
     const { data: updatedDeal, error } = await (supabase as any)
       .from('deals')
@@ -33,6 +46,19 @@ export async function PUT(
       .single()
 
     if (error) throw error
+
+    if (existingDeal.assigned_rep_id && existingDeal.assigned_rep_id !== authUser.id) {
+      await createNotification({
+        recipientId: existingDeal.assigned_rep_id,
+        type: 'record_updated',
+        recordType: 'deal',
+        recordId: id,
+        recordName: updatedDeal.opportunity_name,
+        message: `${authUser.full_name} updated "${updatedDeal.opportunity_name}"`,
+        actorId: authUser.id,
+        actorName: authUser.full_name,
+      })
+    }
 
     return NextResponse.json(updatedDeal)
   } catch (error) {

@@ -35,6 +35,10 @@ export type Deal = {
   assigned_rep_id?: string | null
   assigned_rep_name?: string | null
   created_at: string
+  pending_transition?: any
+  pending_transition_requested_by?: string | null
+  pending_transition_requested_by_name?: string | null
+  pending_transition_action?: string | null
   account?: { name: string; industry: string | null }
   lead?: { opportunity_name: string; stage: string }
   originating_deal?: { opportunity_name: string; deal_type: string }
@@ -196,8 +200,18 @@ export async function updateDealStage(
 
   const fromStage = currentDeal.stage
 
-  // Update deals stage & options fields
-  const updatePayload: any = { stage: newStage }
+  // Update deals stage & options fields. Also unconditionally clears any
+  // pending_transition* columns: a successful stage write of any kind makes
+  // an outstanding rep request stale by definition, whether it's the one
+  // just approved or one this direct write is superseding.
+  const updatePayload: any = {
+    stage: newStage,
+    pending_transition: null,
+    pending_transition_requested_by: null,
+    pending_transition_requested_by_name: null,
+    pending_transition_requested_at: null,
+    pending_transition_action: null,
+  }
   if (newStage === 'closed_lost') {
     updatePayload.lost_reason = options.lost_reason || null
   } else if (newStage === 'on_hold') {

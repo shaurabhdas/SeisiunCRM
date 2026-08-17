@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, schemaStorage } from '@/lib/accounts'
-import { requireAuth, canModifyRecord } from '@/lib/auth'
-import { camelCaseLead } from '@/lib/leads'
+import { requireAuth, canModifyRecord, isManagerOrAbove } from '@/lib/auth'
+import { camelCaseLead, applyLeadStageTransition, getLeadStagePrerequisiteError } from '@/lib/leads'
+import { notifyManagers, createNotification } from '@/lib/notifications'
+import { notifyApprovalNeeded } from '@/lib/slack'
 
 export async function PUT(
   request: NextRequest,
@@ -30,88 +32,80 @@ export async function PUT(
       }
 
       const fromStage = lead.stage
-      const contacts = lead.contacts || []
-      const activities = lead.activities || []
 
-      if (toStage !== 'disqualified') {
-        if (fromStage === 'contact' && toStage === 'outreach') {
-          const hasEmail = activities.some((a: any) => a.activity_type?.toLowerCase() === 'email')
-          if (!hasEmail) return NextResponse.json({ error: 'At least one activity of type "email" is required to move to Outreach.' }, { status: 400 })
-        }
-        if (fromStage === 'outreach' && toStage === 'connected') {
-          const hasCallOrMeeting = activities.some((a: any) => ['call', 'meeting'].includes(a.activity_type?.toLowerCase()))
-          if (!hasCallOrMeeting) return NextResponse.json({ error: 'At least one activity of type "call" or "meeting" is required to move to Connected.' }, { status: 400 })
-        }
-        if (fromStage === 'connected' && toStage === 'presentation') {
-          if (contacts.length === 0) return NextResponse.json({ error: 'At least one contact is required to move to Presentation.' }, { status: 400 })
-        }
-        if (fromStage === 'presentation' && toStage === 'demo') {
-          const hasPresentation = activities.some((a: any) => a.activity_type?.toLowerCase() === 'presentation')
-          if (!hasPresentation) return NextResponse.json({ error: 'At least one activity of type "presentation" is required to move to Demo.' }, { status: 400 })
-        }
-        if (fromStage === 'demo' && toStage === 'evaluating') {
-          const hasDemo = activities.some((a: any) => a.activity_type?.toLowerCase() === 'demo')
-          if (!hasDemo) return NextResponse.json({ error: 'At least one activity of type "demo" is required to move to Evaluating.' }, { status: 400 })
-          if (!lead.forecast_close_date) return NextResponse.json({ error: 'Forecast Close Date must be set to move to Evaluating.' }, { status: 400 })
-          const hasBuyerOrDecisionMaker = contacts.some((c: any) => ['economic_buyer', 'decision_maker'].includes(c.stakeholder_role?.toLowerCase() || ''))
-          if (!hasBuyerOrDecisionMaker) return NextResponse.json({ error: 'At least one contact with role "Economic Buyer" or "Decision Maker" is required to move to Evaluating.' }, { status: 400 })
-        }
-        if (fromStage === 'evaluating' && toStage === 'deal') {
-          if (!postDemoOutcome) return NextResponse.json({ error: 'A post demo outcome must be selected to close this lead.' }, { status: 400 })
-          if (['not_now', 'not_a_fit'].includes(postDemoOutcome)) {
-            if (!canModifyRecord(authUser, lead.assigned_rep_id)) {
-              return NextResponse.json({ error: 'Only the assigned rep or a manager can disqualify this lead.' }, { status: 403 })
-            }
-
-            const { data: updatedLead, error: upErr } = await supabase
-              .from('leads')
-              .update({
-                stage: 'disqualified',
-                post_demo_outcome: postDemoOutcome,
-                disqualification_reason: postDemoOutcome === 'not_now' ? 'no_timing' : 'no_need'
-              })
-              .eq('id', lead.id)
-              .select()
-              .single()
-            if (upErr) throw upErr
-
-            const { error: histErr } = await supabase
-              .from('lead_stage_history')
-              .insert({
-                lead_id: lead.id,
-                from_stage: fromStage,
-                to_stage: 'disqualified',
-                changed_by: authUser.id
-              })
-            if (histErr) throw histErr
-
-            return NextResponse.json({ message: 'Lead disqualified as part of evaluating outcome.', stage: 'disqualified' })
-          }
+      // Unchanged from before this feature: only the owner/manager may
+      // disqualify a lead via a negative post-demo outcome.
+      if (fromStage === 'evaluating' && toStage === 'deal' && ['not_now', 'not_a_fit'].includes(postDemoOutcome)) {
+        if (!canModifyRecord(authUser, lead.assigned_rep_id)) {
+          return NextResponse.json({ error: 'Only the assigned rep or a manager can disqualify this lead.' }, { status: 403 })
         }
       }
 
-      const { data: updatedLead, error: updateErr } = await supabase
-        .from('leads')
-        .update({
-          stage: toStage,
-          post_demo_outcome: toStage === 'deal' || toStage === 'evaluating' ? postDemoOutcome : lead.post_demo_outcome
+      const prereqError = getLeadStagePrerequisiteError(lead, lead.contacts || [], lead.activities || [], toStage, postDemoOutcome)
+      if (prereqError) {
+        return NextResponse.json({ error: prereqError }, { status: 400 })
+      }
+
+      if (!isManagerOrAbove(authUser.role)) {
+        if (lead.pending_transition) {
+          return NextResponse.json({ error: 'This lead already has a stage change awaiting approval.' }, { status: 409 })
+        }
+
+        const { data: updatedLead, error: pendingErr } = await supabase
+          .from('leads')
+          .update({
+            pending_transition: { toStage, postDemoOutcome },
+            pending_transition_requested_by: authUser.id,
+            pending_transition_requested_by_name: authUser.full_name,
+            pending_transition_requested_at: new Date().toISOString(),
+            pending_transition_action: 'stage',
+          })
+          .eq('id', id)
+          .select()
+          .single()
+        if (pendingErr) throw pendingErr
+
+        const link = `${process.env.NEXT_PUBLIC_SITE_URL}/leads?lead=${id}`
+        await notifyManagers({
+          type: 'approval_requested',
+          recordType: 'lead',
+          recordId: id,
+          recordName: lead.opportunity_name,
+          message: `${authUser.full_name} requested to move "${lead.opportunity_name}" to ${toStage}`,
+          actorId: authUser.id,
+          actorName: authUser.full_name,
         })
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (updateErr) throw updateErr
-
-      const { error: histErr } = await supabase
-        .from('lead_stage_history')
-        .insert({
-          lead_id: lead.id,
-          from_stage: fromStage,
-          to_stage: toStage,
-          changed_by: authUser.id
+        await notifyApprovalNeeded({
+          recordType: 'lead',
+          recordName: lead.opportunity_name,
+          requestedByName: authUser.full_name,
+          link,
         })
-      if (histErr) throw histErr
 
+        return NextResponse.json(camelCaseLead(updatedLead))
+      }
+
+      const hadPendingRequest = !!lead.pending_transition
+      const previousRequester = lead.pending_transition_requested_by
+
+      const { lead: updatedLead, autoDisqualified } = await applyLeadStageTransition(id, toStage, postDemoOutcome, authUser.id)
+
+      if (hadPendingRequest && previousRequester && previousRequester !== authUser.id) {
+        await createNotification({
+          recipientId: previousRequester,
+          type: 'record_updated',
+          recordType: 'lead',
+          recordId: id,
+          recordName: lead.opportunity_name,
+          message: `${authUser.full_name} updated "${lead.opportunity_name}" directly, superseding your pending request`,
+          actorId: authUser.id,
+          actorName: authUser.full_name,
+        })
+      }
+
+      if (autoDisqualified) {
+        return NextResponse.json({ message: 'Lead disqualified as part of evaluating outcome.', stage: 'disqualified' })
+      }
       return NextResponse.json(camelCaseLead(updatedLead))
     } catch (error) {
       return NextResponse.json({ error: error instanceof Error ? error.message : JSON.stringify(error) }, { status: 500 })

@@ -7,6 +7,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { Card } from "@/components/ui/card"
+import { PendingApprovalBanner } from "@/components/pending-approval-banner"
 import {
   Handshake,
   TrendingUp,
@@ -94,6 +95,7 @@ function PipelinePageContent() {
   const [activeReps, setActiveReps] = React.useState<any[]>([])
   const [reassignmentOpen, setReassignmentOpen] = React.useState(true)
   const [assigningDealId, setAssigningDealId] = React.useState<string | null>(null)
+  const [isApproving, setIsApproving] = React.useState(false)
 
   const [deals, setDeals] = React.useState<Deal[]>([])
   const [allAccounts, setAllAccounts] = React.useState<Account[]>([])
@@ -510,9 +512,30 @@ function PipelinePageContent() {
         setIsOnHoldOpen(false)
         setOnHoldResumeDate("")
         await loadData()
+      } else {
+        const err = await res.json()
+        alert(err.error || "Failed to update stage")
       }
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  const handleApprove = async () => {
+    if (!selectedDealId) return
+    setIsApproving(true)
+    try {
+      const res = await fetch(`/api/deals/${selectedDealId}/approve`, { method: 'POST' })
+      if (res.ok) {
+        await loadData()
+      } else {
+        const err = await res.json()
+        alert(err.error || "Failed to approve")
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsApproving(false)
     }
   }
 
@@ -971,37 +994,49 @@ function PipelinePageContent() {
             )}
 
             <div className="flex items-center gap-3 mt-5 pt-4 border-t">
-              {/* Move to Next Stage with Gate Condition checks */}
-              {(() => {
-                const nextStage = getNextStage(selectedDeal.stage)
-                const error = getStageProgressionError(selectedDeal, nextStage || '')
-                const disabled = !nextStage || !!error
+              {selectedDeal.pending_transition ? (
+                <PendingApprovalBanner
+                  pendingTransition={selectedDeal.pending_transition}
+                  requestedByName={selectedDeal.pending_transition_requested_by_name || null}
+                  isManager={userProfile?.role === 'super_admin' || userProfile?.role === 'manager'}
+                  onApprove={handleApprove}
+                  approving={isApproving}
+                />
+              ) : (
+                <>
+                  {/* Move to Next Stage with Gate Condition checks */}
+                  {(() => {
+                    const nextStage = getNextStage(selectedDeal.stage)
+                    const error = getStageProgressionError(selectedDeal, nextStage || '')
+                    const disabled = !nextStage || !!error
 
-                return (
-                  <div className="relative group/btn-tooltip">
+                    return (
+                      <div className="relative group/btn-tooltip">
+                        <button
+                          onClick={handleMoveToNextStage}
+                          disabled={disabled}
+                          className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-muted disabled:text-muted-foreground text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
+                        >
+                          <span>Move to Next Stage</span>
+                        </button>
+                        {disabled && nextStage && (
+                          <span className="absolute top-full mt-2 left-0 hidden group-hover/btn-tooltip:block z-50 w-56 rounded-md bg-zinc-950 p-2.5 text-[10px] leading-relaxed text-white shadow-md font-medium text-left">
+                            {error}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })()}
+
+                  {selectedDeal.stage !== 'closed_lost' && (
                     <button
-                      onClick={handleMoveToNextStage}
-                      disabled={disabled}
-                      className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-muted disabled:text-muted-foreground text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
+                      onClick={() => setIsMarkLostOpen(true)}
+                      className="text-xs font-bold text-red-600 hover:text-red-700 cursor-pointer"
                     >
-                      <span>Move to Next Stage</span>
+                      Mark as Lost
                     </button>
-                    {disabled && nextStage && (
-                      <span className="absolute top-full mt-2 left-0 hidden group-hover/btn-tooltip:block z-50 w-56 rounded-md bg-zinc-950 p-2.5 text-[10px] leading-relaxed text-white shadow-md font-medium text-left">
-                        {error}
-                      </span>
-                    )}
-                  </div>
-                )
-              })()}
-
-              {selectedDeal.stage !== 'closed_lost' && (
-                <button
-                  onClick={() => setIsMarkLostOpen(true)}
-                  className="text-xs font-bold text-red-600 hover:text-red-700 cursor-pointer"
-                >
-                  Mark as Lost
-                </button>
+                  )}
+                </>
               )}
             </div>
           </div>
