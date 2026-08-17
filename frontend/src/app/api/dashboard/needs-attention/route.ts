@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { calculateDaysSinceContact } from '@/lib/followup'
+import { requireAuth } from '@/lib/auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,6 +10,7 @@ const supabase = createClient(
 
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth()
     const [dealsRes, dealActsRes, leadsRes, accountsRes, tasksRes] = await Promise.all([
       supabase.from('deals').select('id, opportunity_name, account_id, stage, reported_value').in('stage', ['proposal_submitted', 'negotiation']),
       supabase.from('deal_activities').select('deal_id, activity_date').order('activity_date', { ascending: false }),

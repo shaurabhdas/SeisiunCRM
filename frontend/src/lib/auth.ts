@@ -7,6 +7,7 @@ export type AuthUser = {
   full_name: string
   role: 'super_admin' | 'manager' | 'rep' | 'pending'
   status: 'active' | 'revoked' | 'pending'
+  password_set: boolean
 }
 
 async function getAuthUserClient() {
@@ -44,7 +45,15 @@ export async function getAuthUser(): Promise<AuthUser | null> {
   const schema = headerList.get('x-supabase-schema') || 'public'
 
   const supabase = await getAuthUserClient()
-  const { data: { user } } = await supabase.auth.getUser()
+
+  // Mobile clients have no cookie session - they authenticate against Supabase
+  // Auth directly and send the resulting access token as a bearer header.
+  // Passing the token explicitly to getUser() verifies it statelessly against
+  // Supabase's Auth server, bypassing the cookie storage adapter entirely.
+  const bearerMatch = headerList.get('authorization')?.match(/^Bearer\s+(.+)$/i)
+  const { data: { user } } = bearerMatch
+    ? await supabase.auth.getUser(bearerMatch[1])
+    : await supabase.auth.getUser()
 
   if (!user) {
     // Under testing, fallback to a mock Super Admin user if no active session.
@@ -56,7 +65,8 @@ export async function getAuthUser(): Promise<AuthUser | null> {
         email: 'shaurabh.franciscan21@gmail.com',
         full_name: 'Shaurabh Das',
         role: 'super_admin',
-        status: 'active'
+        status: 'active',
+        password_set: true
       }
     }
     return null
@@ -64,7 +74,7 @@ export async function getAuthUser(): Promise<AuthUser | null> {
 
   const { data: profile } = await supabase
     .from('user_profiles')
-    .select('role, status, full_name')
+    .select('role, status, full_name, password_set')
     .eq('id', user.id)
     .single()
 
@@ -76,6 +86,7 @@ export async function getAuthUser(): Promise<AuthUser | null> {
     full_name: profile.full_name || user.email!,
     role: profile.role,
     status: profile.status,
+    password_set: profile.password_set,
   }
 }
 

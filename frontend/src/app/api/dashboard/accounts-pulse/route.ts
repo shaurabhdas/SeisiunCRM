@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getTimeframeDates } from '@/lib/followup'
+import { requireAuth } from '@/lib/auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,6 +13,7 @@ const CLOSED_DEAL_STAGES = ['closed_won', 'closed_lost']
 
 export async function GET(request: NextRequest) {
   try {
+    await requireAuth()
     const { searchParams } = new URL(request.url)
     const timeframe = searchParams.get('timeframe') || 'this-week'
     const { start, end } = getTimeframeDates(timeframe)

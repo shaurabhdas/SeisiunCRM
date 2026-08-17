@@ -34,6 +34,22 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
+  // Mobile clients send no cookies, only a bearer token. Verify it here
+  // (rather than blindly bypassing) since several API routes below rely on
+  // this middleware as their only auth gate and have no requireAuth() call
+  // of their own - a blind bypass would let any request bearing an
+  // Authorization header through to those routes unauthenticated. A valid
+  // token skips the cookie/profile-status redirect logic entirely since
+  // that's built for HTML-navigable clients; status gating for bearer
+  // requests happens in getAuthUser() and via the mobile app's own /api/me
+  // check after login.
+  const bearerMatch = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)
+  if (bearerMatch) {
+    const { data: { user: bearerUser } } = await supabase.auth.getUser(bearerMatch[1])
+    if (!bearerUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return supabaseResponse
+  }
+
   const { data: { user } } = await supabase.auth.getUser()
 
   // Public routes that do not require authentication

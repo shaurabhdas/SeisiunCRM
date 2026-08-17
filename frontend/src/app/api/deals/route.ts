@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const schema = request.headers.get('x-supabase-schema') || 'public'
   return schemaStorage.run(schema, async () => {
     try {
+      await requireAuth()
       const deals = await fetchDeals()
       return NextResponse.json(deals)
     } catch (error) {
